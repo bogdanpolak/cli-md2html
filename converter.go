@@ -44,106 +44,10 @@ func ConvertMarkdown(inputFile, outputFile, templateFile, title string) error {
 
 // MarkdownToHTML converts markdown to HTML with full HTML document structure
 func MarkdownToHTML(markdown string) string {
+	content := convertMarkdownToHTMLContent(markdown)
 	var result strings.Builder
-
 	result.WriteString("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>Converted Document</title>\n</head>\n<body>\n")
-
-	lines := strings.Split(markdown, "\n")
-	inCodeBlock := false
-	codeBlockContent := strings.Builder{}
-	inOrderedList := false
-	inUnorderedList := false
-
-	for i, line := range lines {
-		// Handle code blocks (```)
-		if strings.HasPrefix(strings.TrimSpace(line), "```") {
-			// Close any open lists
-			if inOrderedList {
-				result.WriteString("</ol>\n")
-				inOrderedList = false
-			}
-			if inUnorderedList {
-				result.WriteString("</ul>\n")
-				inUnorderedList = false
-			}
-
-			if inCodeBlock {
-				// End of code block
-				result.WriteString("<div class=\"source-code\">\n<pre><code>")
-				result.WriteString(escapeHTML(codeBlockContent.String()))
-				result.WriteString("</code></pre>\n</div>\n")
-				codeBlockContent.Reset()
-				inCodeBlock = false
-			} else {
-				// Start of code block
-				inCodeBlock = true
-			}
-			continue
-		}
-
-		if inCodeBlock {
-			if codeBlockContent.Len() > 0 {
-				codeBlockContent.WriteString("\n")
-			}
-			codeBlockContent.WriteString(line)
-			continue
-		}
-
-		// Process regular lines
-		lineType, processedLine := processLineWithType(line)
-
-		// Handle list grouping
-		if lineType == "ol" {
-			if !inOrderedList {
-				if inUnorderedList {
-					result.WriteString("</ul>\n")
-					inUnorderedList = false
-				}
-				result.WriteString("<ol>\n")
-				inOrderedList = true
-			}
-			result.WriteString(processedLine)
-			result.WriteString("\n")
-		} else if lineType == "ul" {
-			if !inUnorderedList {
-				if inOrderedList {
-					result.WriteString("</ol>\n")
-					inOrderedList = false
-				}
-				result.WriteString("<ul>\n")
-				inUnorderedList = true
-			}
-			result.WriteString(processedLine)
-			result.WriteString("\n")
-		} else {
-			// Close any open lists
-			if inOrderedList {
-				result.WriteString("</ol>\n")
-				inOrderedList = false
-			}
-			if inUnorderedList {
-				result.WriteString("</ul>\n")
-				inUnorderedList = false
-			}
-
-			if processedLine != "" {
-				result.WriteString(processedLine)
-				result.WriteString("\n")
-			} else if i < len(lines)-1 && lines[i+1] != "" {
-				// Add empty line only if next line is not empty (avoid double spacing)
-				result.WriteString("\n")
-			}
-		}
-	}
-
-	// Close any remaining open lists
-	if inOrderedList {
-		result.WriteString("</ol>\n")
-	}
-	if inUnorderedList {
-		result.WriteString("</ul>\n")
-	}
-
+	result.WriteString(content)
 	result.WriteString("</body>\n</html>")
 	return result.String()
 }
@@ -163,7 +67,7 @@ func MarkdownToHTMLWithTemplate(markdown, templateFile, title string) (string, e
 	}
 
 	// Parse template
-	tmpl, err := template.New("document").Parse(string(templateContent))
+	template, err := template.New("document").Parse(string(templateContent))
 	if err != nil {
 		return "", fmt.Errorf("error parsing template: %w", err)
 	}
@@ -184,7 +88,7 @@ func MarkdownToHTMLWithTemplate(markdown, templateFile, title string) (string, e
 
 	// Execute template
 	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, data)
+	err = template.Execute(&buf, data)
 	if err != nil {
 		return "", fmt.Errorf("error executing template: %w", err)
 	}
@@ -194,6 +98,11 @@ func MarkdownToHTMLWithTemplate(markdown, templateFile, title string) (string, e
 
 // MarkdownToHTMLContent converts markdown to HTML content only (without full document structure)
 func MarkdownToHTMLContent(markdown string) string {
+	return convertMarkdownToHTMLContent(markdown)
+}
+
+// convertMarkdownToHTMLContent is the internal implementation that converts markdown to HTML content
+func convertMarkdownToHTMLContent(markdown string) string {
 	var result strings.Builder
 
 	lines := strings.Split(markdown, "\n")
@@ -241,7 +150,8 @@ func MarkdownToHTMLContent(markdown string) string {
 		lineType, processedLine := processLineWithType(line)
 
 		// Handle list grouping
-		if lineType == "ol" {
+		switch lineType {
+		case "ol":
 			if !inOrderedList {
 				if inUnorderedList {
 					result.WriteString("</ul>\n")
@@ -252,7 +162,7 @@ func MarkdownToHTMLContent(markdown string) string {
 			}
 			result.WriteString(processedLine)
 			result.WriteString("\n")
-		} else if lineType == "ul" {
+		case "ul":
 			if !inUnorderedList {
 				if inOrderedList {
 					result.WriteString("</ol>\n")
@@ -263,7 +173,7 @@ func MarkdownToHTMLContent(markdown string) string {
 			}
 			result.WriteString(processedLine)
 			result.WriteString("\n")
-		} else {
+		default:
 			// Close any open lists
 			if inOrderedList {
 				result.WriteString("</ol>\n")
