@@ -3,61 +3,20 @@ package main
 import (
 	"strings"
 	"testing"
+
+	td "github.com/maxatome/go-testdeep/td"
 )
 
-// ============================================================================
-// MARKDOWN TO HTML TESTS
-// ============================================================================
-
-func TestMarkdownToHTML(t *testing.T) {
-	markdown := `# Test Header
-
-This is a test paragraph.
-
-- Item 1
-- Item 2`
-
-	result := MarkdownToHTML(markdown)
-
-	// Check if the result contains expected HTML elements
-	if !strings.Contains(result, "<h1>Test Header</h1>") {
-		t.Error("Expected h1 tag with 'Test Header'")
-	}
-
-	if !strings.Contains(result, "<p>This is a test paragraph.</p>") {
-		t.Error("Expected paragraph tag")
-	}
-
-	if !strings.Contains(result, "<ul>") || !strings.Contains(result, "</ul>") {
-		t.Error("Expected unordered list tags")
-	}
-
-	if !strings.Contains(result, "<li>Item 1</li>") {
-		t.Error("Expected list item 'Item 1'")
-	}
-
-	// Must contain full HTML document structure
-	if !strings.Contains(result, "<!DOCTYPE html>") {
-		t.Error("Expected <!DOCTYPE html>")
-	}
-	if !strings.Contains(result, "<html>") || !strings.Contains(result, "</html>") {
-		t.Error("Expected <html> tags")
-	}
-	if !strings.Contains(result, "<body>") || !strings.Contains(result, "</body>") {
-		t.Error("Expected <body> tags")
-	}
-}
-
-func TestMarkdownToHTMLContent(t *testing.T) {
+func TestGenerateHtmlBodyInternalContent(t *testing.T) {
 	markdown := `## Header
 
 Some content.`
 
-	result := MarkdownToHTMLContent(markdown)
+	result := GenerateHtmlBodyInternalContent(markdown)
 
 	// Should not contain full HTML document structure
 	if strings.Contains(result, "<!DOCTYPE html>") || strings.Contains(result, "<html>") {
-		t.Error("MarkdownToHTMLContent should not contain full HTML document structure")
+		t.Error("GenerateHtmlBodyInternalContent should not contain full HTML document structure")
 	}
 
 	// Should contain the converted content
@@ -71,7 +30,7 @@ Some content.`
 }
 
 // ============================================================================
-// TABLE-DRIVEN TESTS FOR HEADERS
+// HEADERS
 // ============================================================================
 
 func TestHeaderConversion(t *testing.T) {
@@ -81,22 +40,27 @@ func TestHeaderConversion(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "H1 header",
+			name:     "01 H1 header",
 			markdown: "# Main Title",
 			expected: "<h1>Main Title</h1>",
 		},
 		{
-			name:     "H2 header",
+			name:     "02 H2 header",
 			markdown: "## Subtitle",
 			expected: "<h2>Subtitle</h2>",
 		},
 		{
-			name:     "H1 with inline code",
+			name:     "03 H3 header",
+			markdown: "### Sub Subtitle",
+			expected: "<h3>Sub Subtitle</h3>",
+		},
+		{
+			name:     "04 H1 with inline code",
 			markdown: "# Title with `code`",
 			expected: "<h1>Title with <code>code</code></h1>",
 		},
 		{
-			name:     "H2 with link",
+			name:     "05 H2 with link",
 			markdown: "## See [docs](https://example.com)",
 			expected: "<h2>See <a href=\"https://example.com\">docs</a></h2>",
 		},
@@ -104,7 +68,7 @@ func TestHeaderConversion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := MarkdownToHTMLContent(tt.markdown)
+			result := GenerateHtmlBodyInternalContent(tt.markdown)
 			if !strings.Contains(result, tt.expected) {
 				t.Errorf("expected %q to contain %q", result, tt.expected)
 			}
@@ -113,7 +77,7 @@ func TestHeaderConversion(t *testing.T) {
 }
 
 // ============================================================================
-// TABLE-DRIVEN TESTS FOR LISTS
+// LISTS
 // ============================================================================
 
 func TestUnorderedListConversion(t *testing.T) {
@@ -123,33 +87,35 @@ func TestUnorderedListConversion(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "Single item list",
+			name:     "01 Single item list",
 			markdown: "- Item 1",
-			expected: "<ul>\n    <li>Item 1</li>\n</ul>",
+			expected: "<ul>\n    <li>Item 1</li>\n</ul>\n",
 		},
 		{
-			name:     "Multiple items",
+			name:     "02 Multiple items",
 			markdown: "- First\n- Second\n- Third",
-			expected: "<li>First</li>",
+			expected: "<ul>\n    <li>First</li>\n    <li>Second</li>\n    <li>Third</li>\n</ul>\n",
 		},
 		{
-			name:     "List with inline code",
+			name:     "03 Nested list items",
+			markdown: "- First\n  - First Child\n  - Second Child\n- second",
+			expected: "<ul>\n<li>First\n    <ul>\n        <li>First Child</li>\n        <li>Second Child</li>\n    </ul>\n</li>\n<li>Second</li>\n</ul>\n",
+		},
+		{
+			name:     "04 List with inline code",
 			markdown: "- Run `npm install`",
-			expected: "<li>Run <code>npm install</code></li>",
+			expected: "<ul>\n    <li>Run <code>npm install</code></li>\n</ul>\n",
 		},
 		{
-			name:     "List with link",
+			name:     "05 List with link",
 			markdown: "- Visit [GitHub](https://github.com)",
-			expected: "<li>Visit <a href=\"https://github.com\">GitHub</a></li>",
+			expected: "<ul>\n    <li>Visit <a href=\"https://github.com\">GitHub</a></li>\n</ul>\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := MarkdownToHTMLContent(tt.markdown)
-			if !strings.Contains(result, tt.expected) {
-				t.Errorf("expected %q to contain %q", result, tt.expected)
-			}
+			td.Cmp(t, GenerateHtmlBodyInternalContent(tt.markdown), tt.expected)
 		})
 	}
 }
@@ -158,37 +124,47 @@ func TestOrderedListConversion(t *testing.T) {
 	tests := []struct {
 		name     string
 		markdown string
-		expected string
+		expected []string
 	}{
 		{
-			name:     "Single ordered item",
+			name:     "01 Single ordered item",
 			markdown: "1. First step",
-			expected: "<ol>\n    <li>First step</li>\n</ol>",
+			expected: []string{
+				"<ol>",
+				"⨀<li>First step</li>",
+				"</ol>", ""},
 		},
 		{
-			name:     "Multiple ordered items",
+			name:     "02 Multiple ordered items",
 			markdown: "1. Step one\n2. Step two\n3. Step three",
-			expected: "<li>Step one</li>",
+			expected: []string{
+				"<ol>",
+				"⨀<li>Step one</li>",
+				"⨀<li>Step two</li>",
+				"⨀<li>Step three</li>",
+				"</ol>", ""},
 		},
 		{
-			name:     "Ordered list with code",
+			name:     "03 Ordered list with code",
 			markdown: "1. Install `package`\n2. Run `build`",
-			expected: "<code>package</code>",
+			expected: []string{
+				"<ol>",
+				"⨀<li>Install <code>package</code></li>",
+				"⨀<li>Run <code>build</code></li>",
+				"</ol>", ""},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := MarkdownToHTMLContent(tt.markdown)
-			if !strings.Contains(result, tt.expected) {
-				t.Errorf("expected %q to contain %q", result, tt.expected)
-			}
+			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "⨀", "    ")
+			td.Cmp(t, GenerateHtmlBodyInternalContent(tt.markdown), expected)
 		})
 	}
 }
 
 // ============================================================================
-// TABLE-DRIVEN TESTS FOR CODE BLOCKS
+// CODE BLOCKS
 // ============================================================================
 
 func TestCodeBlockConversion(t *testing.T) {
@@ -198,39 +174,57 @@ func TestCodeBlockConversion(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "Simple code block",
+			name:     "01 Simple",
 			markdown: "```\ncode here\n```",
-			expected: "<div class=\"source-code\">",
+			expected: `<div class="source-code">
+<pre><code>code here</code></pre>
+</div>
+`,
 		},
 		{
-			name:     "Code block with language hint",
-			markdown: "```go\nfunc main() {}\n```",
-			expected: "func main() {}",
+			name: "02 Go function",
+			markdown: "```\n" + `func main() {
+    fmt.Println("Hello")
+}
+` + "```\n",
+			expected: `<div class="source-code">
+<pre><code>func main() {
+    fmt.Println(&quot;Hello&quot;)
+}</code></pre>
+</div>
+`,
 		},
 		{
-			name:     "Code block with HTML characters",
+			name:     "03 Code block with HTML characters",
 			markdown: "```\n<div>test</div>\n```",
-			expected: "&lt;div&gt;test&lt;/div&gt;",
+			expected: `<div class="source-code">
+<pre><code>&lt;div&gt;test&lt;/div&gt;</code></pre>
+</div>
+`,
 		},
 		{
-			name:     "Multiple code blocks",
+			name:     "04 Multiple code blocks",
 			markdown: "```\nfirst\n```\n\n```\nsecond\n```",
-			expected: "first",
+			expected: `<div class="source-code">
+<pre><code>first</code></pre>
+</div>
+
+<div class="source-code">
+<pre><code>second</code></pre>
+</div>
+`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := MarkdownToHTMLContent(tt.markdown)
-			if !strings.Contains(result, tt.expected) {
-				t.Errorf("expected %q to contain %q", result, tt.expected)
-			}
+			td.Cmp(t, GenerateHtmlBodyInternalContent(tt.markdown), tt.expected)
 		})
 	}
 }
 
 // ============================================================================
-// TABLE-DRIVEN TESTS FOR INLINE ELEMENTS
+// INLINE CODE
 // ============================================================================
 
 func TestInlineCodeConversion(t *testing.T) {
@@ -240,38 +234,35 @@ func TestInlineCodeConversion(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "Simple inline code",
-			input:    "Use `function()`",
+			name:     "Inline_code_simple",
+			input:    "`function()`",
 			expected: "<code>function()</code>",
 		},
 		{
-			name:     "Multiple inline codes",
-			input:    "Call `foo()` and `bar()`",
-			expected: "<code>foo()</code>",
+			name:     "Inline_code_Multiple_elements",
+			input:    "Call function `foo()` and `bar()`",
+			expected: "Call function <code>foo()</code> and <code>bar()</code>",
 		},
 		{
-			name:     "Inline code with special chars",
+			name:     "Inline_code_with_special_chars",
 			input:    "Use `<tag>`",
-			expected: "<code>&lt;tag&gt;</code>",
+			expected: "Use <code>&lt;tag&gt;</code>",
 		},
 		{
-			name:     "Inline code at start",
+			name:     "Inline_code_at_start",
 			input:    "`code` at start",
-			expected: "<code>code</code>",
+			expected: "<code>code</code> at start",
 		},
 		{
-			name:     "Inline code at end",
+			name:     "Inline_code_at_end",
 			input:    "at end `code`",
-			expected: "<code>code</code>",
+			expected: "at end <code>code</code>",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := processInlineElements(tt.input)
-			if !strings.Contains(result, tt.expected) {
-				t.Errorf("expected %q to contain %q", result, tt.expected)
-			}
+			td.Cmp(t, processInlineElements(tt.input), tt.expected)
 		})
 	}
 }
@@ -289,18 +280,18 @@ func TestLinkConversion(t *testing.T) {
 		},
 		{
 			name:     "Auto-detected HTTPS URL",
-			input:    "Visit https://example.com today",
-			expected: `<a href="https://example.com">https://example.com</a>`,
+			input:    "Visit https://example.com to get started",
+			expected: `Visit <a href="https://example.com">https://example.com</a> to get started`,
 		},
 		{
 			name:     "Auto-detected HTTP URL",
 			input:    "Go to http://example.com",
-			expected: `<a href="http://example.com">http://example.com</a>`,
+			expected: `Go to <a href="http://example.com">http://example.com</a>`,
 		},
 		{
 			name:     "Multiple links",
 			input:    "[Google](https://google.com) and [Bing](https://bing.com)",
-			expected: `<a href="https://google.com">Google</a>`,
+			expected: `<a href="https://google.com">Google</a> and <a href="https://bing.com">Bing</a>`,
 		},
 		{
 			name:     "Link with special chars in URL",
@@ -311,10 +302,7 @@ func TestLinkConversion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := processInlineElements(tt.input)
-			if !strings.Contains(result, tt.expected) {
-				t.Errorf("expected %q to contain %q", result, tt.expected)
-			}
+			td.Cmp(t, processInlineElements(tt.input), tt.expected)
 		})
 	}
 }
@@ -374,9 +362,7 @@ func TestEscapeHTML(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := escapeHTML(tt.input)
-			if result != tt.expected {
-				t.Errorf("expected %q, got %q", tt.expected, result)
-			}
+			td.Cmp(t, result, tt.expected)
 		})
 	}
 }
@@ -440,7 +426,7 @@ func TestEdgeCases(t *testing.T) {
 					t.Errorf("unexpected panic: %v", r)
 				}
 			}()
-			result := MarkdownToHTMLContent(tt.markdown)
+			result := GenerateHtmlBodyInternalContent(tt.markdown)
 			if result == "" && tt.markdown != "" && tt.name != "Unclosed code block" {
 				// Allow empty result for some edge cases
 			}
@@ -451,6 +437,17 @@ func TestEdgeCases(t *testing.T) {
 // ============================================================================
 // INTEGRATION TESTS
 // ============================================================================
+
+func TestConvertWithTemplate(t *testing.T) {
+	markdown := "# Hello World"
+	template := "<html><head><title>{{ .Title }}</title></head><body>{{ .Content }}</body></html>"
+	title := "TestABC"
+
+	result, err := ConvertMarkdownToHTML(markdown, template, title)
+
+	td.Cmp(t, err, nil)
+	td.Cmp(t, result, "<html><head><title>TestABC</title></head><body><h1>Hello World</h1>\n</body></html>")
+}
 
 func TestComplexDocument(t *testing.T) {
 	markdown := `# Main Title
@@ -469,36 +466,44 @@ Some text with ` + "`npm install`" + ` command.
 
 ### Nested subsection
 
+#### Level four - Nested subsection
+
 1. First step
 2. Second step with ` + "`code`" + `
 
-` + "```go\n" + `func main() {
+` + "```\n" + `func main() {
     fmt.Println("Hello")
 }
 ` + "```\n" + `
 Visit https://github.com for more info.`
 
-	result := MarkdownToHTMLContent(markdown)
+	result := GenerateHtmlBodyInternalContent(markdown)
 
-	// Verify structure
-	if !strings.Contains(result, "<h1>Main Title</h1>") {
-		t.Error("Missing h1")
-	}
-	if !strings.Contains(result, "<h2>Section 1</h2>") {
-		t.Error("Missing h2")
-	}
-	if !strings.Contains(result, "<ul>") {
-		t.Error("Missing unordered list")
-	}
-	if !strings.Contains(result, "<ol>") {
-		t.Error("Missing ordered list")
-	}
-	if !strings.Contains(result, "source-code") {
-		t.Error("Missing code block")
-	}
-	if !strings.Contains(result, "<a href=") {
-		t.Error("Missing links")
-	}
+	td.Cmp(t, result, td.All(
+		td.Contains("<h1>Main Title</h1>"),
+		td.Contains("<p>This is an introduction with a <a href=\"https://example.com\">link</a> and some <code>inline code</code>.</p>"),
+		td.Contains("<h2>Section 1</h2>"),
+		td.Contains("<p>Some text with <code>npm install</code> command.</p>"),
+		td.Contains("<ul>"),
+		td.Contains("<li>Install dependencies</li>"),
+		td.Contains("<li>Run tests</li>"),
+		td.Contains("<li>Deploy</li>"),
+		td.Contains("</ul>"),
+		td.Contains("<h2>Section 2</h2>"),
+		td.Contains("<h3>Nested subsection</h3>"),
+		td.Contains("<h4>Level four - Nested subsection</h4>"),
+		td.Contains("<ol>"),
+		td.Contains("<li>First step</li>"),
+		td.Contains("<li>Second step with <code>code</code></li>"),
+		td.Contains("</ol>"),
+		td.Contains(`<div class="source-code">
+<pre><code>func main() {
+    fmt.Println(&quot;Hello&quot;)
+}</code></pre>
+</div>
+`),
+		td.Contains("<p>Visit <a href=\"https://github.com\">https://github.com</a> for more info.</p>"),
+	))
 }
 
 func TestProcessInlineElements(t *testing.T) {

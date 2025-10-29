@@ -3,77 +3,22 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"text/template"
 )
 
-// ConvertMarkdown converts a markdown file to HTML
-func ConvertMarkdown(inputFile, outputFile, templateFile, title string) error {
-	// Read input file
-	content, err := os.ReadFile(inputFile)
-	if err != nil {
-		return fmt.Errorf("error reading file: %w", err)
-	}
-
-	// Convert markdown to HTML
-	var html string
-	if templateFile != "" {
-		html, err = MarkdownToHTMLWithTemplate(string(content), templateFile, title)
-		if err != nil {
-			return err
-		}
-	} else {
-		html = MarkdownToHTML(string(content))
-	}
-
-	// Write output
-	if outputFile != "" {
-		err = os.WriteFile(outputFile, []byte(html), 0644)
-		if err != nil {
-			return fmt.Errorf("error writing file: %w", err)
-		}
-		fmt.Printf("HTML written to %s\n", outputFile)
-	} else {
-		fmt.Print(html)
-	}
-
-	return nil
-}
-
-// MarkdownToHTML converts markdown to HTML with full HTML document structure
-func MarkdownToHTML(markdown string) string {
-	content := convertMarkdownToHTMLContent(markdown)
-	var result strings.Builder
-	result.WriteString("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>Converted Document</title>\n</head>\n<body>\n")
-	result.WriteString(content)
-	result.WriteString("</body>\n</html>")
-	return result.String()
-}
-
-// TemplateData represents the data passed to HTML templates
-type TemplateData struct {
-	Title   string
-	Content string
-}
-
-// MarkdownToHTMLWithTemplate converts markdown to HTML using a template file
-func MarkdownToHTMLWithTemplate(markdown, templateFile, title string) (string, error) {
-	// Read template file
-	templateContent, err := os.ReadFile(templateFile)
-	if err != nil {
-		return "", fmt.Errorf("error reading template file: %w", err)
-	}
+// ConvertMarkdownToHTML converts markdown to HTML using a template file
+func ConvertMarkdownToHTML(markdown string, templateText string, title string) (string, error) {
 
 	// Parse template
-	template, err := template.New("document").Parse(string(templateContent))
+	template, err := template.New("document").Parse(templateText)
 	if err != nil {
 		return "", fmt.Errorf("error parsing template: %w", err)
 	}
 
 	// Convert markdown to HTML content (without the full HTML structure)
-	htmlContent := MarkdownToHTMLContent(markdown)
+	htmlContent := GenerateHtmlBodyInternalContent(markdown)
 
 	// Use default title if no title provided
 	if title == "" {
@@ -96,13 +41,13 @@ func MarkdownToHTMLWithTemplate(markdown, templateFile, title string) (string, e
 	return buf.String(), nil
 }
 
-// MarkdownToHTMLContent converts markdown to HTML content only (without full document structure)
-func MarkdownToHTMLContent(markdown string) string {
-	return convertMarkdownToHTMLContent(markdown)
+type TemplateData struct {
+	Title   string
+	Content string
 }
 
-// convertMarkdownToHTMLContent is the internal implementation that converts markdown to HTML content
-func convertMarkdownToHTMLContent(markdown string) string {
+// converts markdown to HTML content (main converter function)
+func GenerateHtmlBodyInternalContent(markdown string) string {
 	var result strings.Builder
 
 	lines := strings.Split(markdown, "\n")
@@ -147,7 +92,7 @@ func convertMarkdownToHTMLContent(markdown string) string {
 		}
 
 		// Process regular lines
-		lineType, processedLine := processLineWithType(line)
+		lineType, processedLine := processSingleLine(line)
 
 		// Handle list grouping
 		switch lineType {
@@ -205,7 +150,7 @@ func convertMarkdownToHTMLContent(markdown string) string {
 	return result.String()
 }
 
-func processLineWithType(line string) (string, string) {
+func processSingleLine(line string) (string, string) {
 	trimmed := strings.TrimSpace(line)
 
 	// Empty lines
@@ -214,6 +159,14 @@ func processLineWithType(line string) (string, string) {
 	}
 
 	// Headers
+	if strings.HasPrefix(trimmed, "#### ") {
+		content := strings.TrimPrefix(trimmed, "#### ")
+		return "h4", fmt.Sprintf("<h4>%s</h4>", processInlineElements(content))
+	}
+	if strings.HasPrefix(trimmed, "### ") {
+		content := strings.TrimPrefix(trimmed, "### ")
+		return "h3", fmt.Sprintf("<h3>%s</h3>", processInlineElements(content))
+	}
 	if strings.HasPrefix(trimmed, "## ") {
 		content := strings.TrimPrefix(trimmed, "## ")
 		return "h2", fmt.Sprintf("<h2>%s</h2>", processInlineElements(content))

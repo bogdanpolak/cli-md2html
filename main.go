@@ -28,3 +28,50 @@ func main() {
 		os.Exit(1)
 	}
 }
+
+func ConvertMarkdown(inputFile, outputFile, templateFile, title string) error {
+	content, err := os.ReadFile(inputFile)
+	if err != nil {
+		return fmt.Errorf("error reading file: %w", err)
+	}
+
+	// Read or assign default template
+	var html string
+	var templateContent string
+	if templateFile != "" {
+		text, err := os.ReadFile(templateFile)
+		if err != nil {
+			return fmt.Errorf("error reading template file: %w", err)
+		}
+		templateContent = string(text)
+	} else {
+		templateContent = `<!DOCTYPE html>
+<html>
+<head>
+	<meta charset=\"UTF-8\">
+	<title>{{ .Title }}</title>
+</head>
+<body>
+{{ .Content }}
+</body>
+</html>`
+	}
+
+	html, err = ConvertMarkdownToHTML(string(content), templateContent, title)
+	if err != nil {
+		return err
+	}
+
+	// Write output
+	if outputFile != "" {
+		err = os.WriteFile(outputFile, []byte(html), 0644)
+		if err != nil {
+			return fmt.Errorf("error writing file: %w", err)
+		}
+		fmt.Printf("HTML written to %s\n", outputFile)
+	} else {
+		fmt.Print(html)
+	}
+
+	return nil
+}
