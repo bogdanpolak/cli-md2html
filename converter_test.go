@@ -42,36 +42,33 @@ func TestHeaderConversion(t *testing.T) {
 		{
 			name:     "01 H1 header",
 			markdown: "# Main Title",
-			expected: "<h1>Main Title</h1>",
+			expected: "<h1>Main Title</h1>\n",
 		},
 		{
 			name:     "02 H2 header",
 			markdown: "## Subtitle",
-			expected: "<h2>Subtitle</h2>",
+			expected: "<h2>Subtitle</h2>\n",
 		},
 		{
 			name:     "03 H3 header",
 			markdown: "### Sub Subtitle",
-			expected: "<h3>Sub Subtitle</h3>",
+			expected: "<h3>Sub Subtitle</h3>\n",
 		},
 		{
 			name:     "04 H1 with inline code",
 			markdown: "# Title with `code`",
-			expected: "<h1>Title with <code>code</code></h1>",
+			expected: "<h1>Title with <code>code</code></h1>\n",
 		},
 		{
 			name:     "05 H2 with link",
 			markdown: "## See [docs](https://example.com)",
-			expected: "<h2>See <a href=\"https://example.com\">docs</a></h2>",
+			expected: "<h2>See <a href=\"https://example.com\">docs</a></h2>\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GenerateHtmlBodyInternalContent(tt.markdown)
-			if !strings.Contains(result, tt.expected) {
-				t.Errorf("expected %q to contain %q", result, tt.expected)
-			}
+			td.Cmp(t, GenerateHtmlBodyInternalContent(tt.markdown), tt.expected)
 		})
 	}
 }
@@ -83,39 +80,78 @@ func TestHeaderConversion(t *testing.T) {
 func TestUnorderedListConversion(t *testing.T) {
 	tests := []struct {
 		name     string
-		markdown string
-		expected string
+		markdown []string
+		expected []string
 	}{
 		{
 			name:     "01 Single item list",
-			markdown: "- Item 1",
-			expected: "<ul>\n    <li>Item 1</li>\n</ul>\n",
+			markdown: []string{"- Item 1"},
+			expected: []string{
+				"<ul>",
+				"∘<li>Item 1</li>",
+				"</ul>",
+				""},
 		},
 		{
-			name:     "02 Multiple items",
-			markdown: "- First\n- Second\n- Third",
-			expected: "<ul>\n    <li>First</li>\n    <li>Second</li>\n    <li>Third</li>\n</ul>\n",
+			name: "02 Multiple items",
+			markdown: []string{
+				"- First",
+				"- Second",
+				"- Third"},
+			expected: []string{
+				"<ul>",
+				"∘<li>First</li>",
+				"∘<li>Second</li>",
+				"∘<li>Third</li>",
+				"</ul>",
+				""},
 		},
 		{
-			name:     "03 Nested list items",
-			markdown: "- First\n  - First Child\n  - Second Child\n- second",
-			expected: "<ul>\n<li>First\n    <ul>\n        <li>First Child</li>\n        <li>Second Child</li>\n    </ul>\n</li>\n<li>Second</li>\n</ul>\n",
+			name: "03 Nested list items",
+			markdown: []string{
+				"- First",
+				"  - First Child",
+				"  - Second Child",
+				"- Second"},
+			expected: []string{
+				"<ul>",
+				"∘<li>First",
+				"∘∘<ul>",
+				"∘∘∘<li>First Child</li>",
+				"∘∘∘<li>Second Child</li>",
+				"∘∘</ul>",
+				"∘</li>",
+				"∘<li>Second</li>",
+				"</ul>",
+				""},
 		},
 		{
-			name:     "04 List with inline code",
-			markdown: "- Run `npm install`",
-			expected: "<ul>\n    <li>Run <code>npm install</code></li>\n</ul>\n",
+			name: "04 List with inline code",
+			markdown: []string{
+				"- Run `npm install`"},
+			expected: []string{
+				"<ul>",
+				"∘<li>Run <code>npm install</code></li>",
+				"</ul>",
+				""},
 		},
 		{
-			name:     "05 List with link",
-			markdown: "- Visit [GitHub](https://github.com)",
-			expected: "<ul>\n    <li>Visit <a href=\"https://github.com\">GitHub</a></li>\n</ul>\n",
+			name: "05 List with link",
+			markdown: []string{
+				"- Visit [GitHub](https://github.com)"},
+			expected: []string{
+				"<ul>",
+				"∘<li>Visit <a href=\"https://github.com\">GitHub</a></li>",
+				"</ul>",
+				""},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			td.Cmp(t, GenerateHtmlBodyInternalContent(tt.markdown), tt.expected)
+			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "∘", "    ")
+			markdown := strings.Join(tt.markdown, "\n")
+			td.Cmp(t, GenerateHtmlBodyInternalContent(markdown), expected)
 		})
 	}
 }
@@ -123,42 +159,50 @@ func TestUnorderedListConversion(t *testing.T) {
 func TestOrderedListConversion(t *testing.T) {
 	tests := []struct {
 		name     string
-		markdown string
+		markdown []string
 		expected []string
 	}{
 		{
-			name:     "01 Single ordered item",
-			markdown: "1. First step",
+			name: "01 Single ordered item",
+			markdown: []string{
+				"1. First step"},
 			expected: []string{
 				"<ol>",
-				"⨀<li>First step</li>",
+				"→<li>First step</li>",
 				"</ol>", ""},
 		},
 		{
-			name:     "02 Multiple ordered items",
-			markdown: "1. Step one\n2. Step two\n3. Step three",
+			name: "02 Multiple ordered items",
+			markdown: []string{
+				"1. Step one",
+				"2. Step two",
+				"3. Step three"},
 			expected: []string{
 				"<ol>",
-				"⨀<li>Step one</li>",
-				"⨀<li>Step two</li>",
-				"⨀<li>Step three</li>",
+				"→<li>Step one</li>",
+				"→<li>Step two</li>",
+				"→<li>Step three</li>",
 				"</ol>", ""},
 		},
 		{
-			name:     "03 Ordered list with code",
-			markdown: "1. Install `package`\n2. Run `build`",
+			name: "03 Ordered list with code",
+			markdown: []string{
+				"1. Install `package`",
+				"2. Run `build`"},
 			expected: []string{
 				"<ol>",
-				"⨀<li>Install <code>package</code></li>",
-				"⨀<li>Run <code>build</code></li>",
+				"→<li>Install <code>package</code></li>",
+				"→<li>Run <code>build</code></li>",
 				"</ol>", ""},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "⨀", "    ")
-			td.Cmp(t, GenerateHtmlBodyInternalContent(tt.markdown), expected)
+			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "→", "    ")
+			markdown := strings.Join(tt.markdown, "\n")
+			actual := GenerateHtmlBodyInternalContent(markdown)
+			td.Cmp(t, actual, expected)
 		})
 	}
 }
