@@ -18,22 +18,19 @@ func ConvertMarkdownToHTML(markdown string, templateText string, title string) (
 	}
 
 	// Convert markdown to HTML content (without the full HTML structure)
-	htmlContent := GenerateHtmlBodyInternalContent(markdown)
+	htmlContent := GenerateHtmlBody(markdown)
 
 	// Use default title if no title provided
 	if title == "" {
 		title = "Converted Document"
 	}
 
-	// Prepare template data
-	data := TemplateData{
-		Title:   title,
-		Content: htmlContent,
-	}
-
 	// Execute template
 	var buf bytes.Buffer
-	err = template.Execute(&buf, data)
+	err = template.Execute(&buf, TemplateData{
+		Title:   title,
+		Content: htmlContent,
+	})
 	if err != nil {
 		return "", fmt.Errorf("error executing template: %w", err)
 	}
@@ -52,82 +49,79 @@ type ListLevel struct {
 	ListType string // "ul" or "ol"
 }
 
+func isCodeLine(ln string) bool {
+	return ln == "```"
+}
+
+func isListLine(ln string) bool {
+	s := strings.Trim(string(ln), " ")
+	if strings.HasPrefix(s, "- ") {
+		return true
+	}
+	matched, _ := regexp.MatchString(`^\d+\.\s`, s)
+	return matched
+}
+
 // converts markdown to HTML content (main converter function)
-func GenerateHtmlBodyInternalContent(markdown string) string {
+func GenerateHtmlBody(markdown string) string {
 	var result strings.Builder
 
 	lines := strings.Split(markdown, "\n")
-	inCodeBlock := false
-	codeBlockContent := strings.Builder{}
 
-	// Process all lines, handling list blocks with the new two-pass algorithm
-	i := 0
-	for i < len(lines) {
-		line := lines[i]
+	lineIdx := 0
+	for lineIdx < len(lines) {
+		currentLine := lines[lineIdx]
 
-		// Handle code blocks (```)
-		if strings.HasPrefix(strings.TrimSpace(line), "```") {
-			if inCodeBlock {
-				// End of code block
-				result.WriteString("<div class=\"source-code\">\n<pre><code>")
-				result.WriteString(escapeHTML(codeBlockContent.String()))
-				result.WriteString("</code></pre>\n</div>\n")
-				codeBlockContent.Reset()
-				inCodeBlock = false
-			} else {
-				// Start of code block
-				inCodeBlock = true
+		// Handle multiline code blocks (```)
+		if isCodeLine(currentLine) {
+			codeBlock := []string{}
+			lineIdx++
+			for lineIdx < len(lines) && !isCodeLine(lines[lineIdx]) {
+				codeBlock = append(codeBlock, lines[lineIdx])
+				lineIdx++
 			}
-			i++
-			continue
-		}
-
-		if inCodeBlock {
-			if codeBlockContent.Len() > 0 {
-				codeBlockContent.WriteString("\n")
-			}
-			codeBlockContent.WriteString(line)
-			i++
+			result.WriteString("<div class=\"source-code\">\n<pre><code>")
+			result.WriteString(escapeHTML(strings.Join(codeBlock, "\n")))
+			result.WriteString("</code></pre>\n</div>\n")
+			lineIdx++ // Skip closing ``` if it exists
 			continue
 		}
 
 		// Check if this line starts a list block
-		if isListLine(line) {
-			// Find the entire list block
-			listBlock := []string{}
-			for i < len(lines) && (isListLine(lines[i]) || strings.TrimSpace(lines[i]) == "") {
-				listBlock = append(listBlock, lines[i])
-				i++
+		if isListLine(currentLine) {
+			listBlock := []string{currentLine}
+			lineIdx++
+			for lineIdx < len(lines) && (isListLine(lines[lineIdx])) {
+				listBlock = append(listBlock, lines[lineIdx])
+				lineIdx++
 			}
-
-			// Process the list block with two-pass algorithm
 			listHTML := processListBlock(listBlock)
 			result.WriteString(listHTML)
-		} else {
-			// Process single non-list line
-			_, processedLine := processSingleLine(line)
-			if processedLine != "" {
-				result.WriteString(processedLine)
-				result.WriteString("\n")
-			} else if i < len(lines)-1 && lines[i+1] != "" {
-				// Add empty line only if next line is not empty (avoid double spacing)
-				result.WriteString("\n")
-			}
-			i++
+			continue
 		}
+
+		// Skip empty lines. Add single empty HTML line only
+		if currentLine == "" {
+			lineIdx++
+			// Skip consecutive empty lines
+			for lineIdx < len(lines) && strings.TrimSpace(lines[lineIdx]) == "" {
+				lineIdx++
+			}
+			result.WriteString("\n")
+			continue
+		}
+
+		// Process single non-list line
+		processedLine := processSingleLine(currentLine)
+		if processedLine != "" {
+			result.WriteString(processedLine)
+			result.WriteString("\n")
+		}
+
+		lineIdx++
 	}
 
 	return result.String()
-}
-
-// Check if a line is a list item (starts with "- " or digit(s) followed by ". ")
-func isListLine(line string) bool {
-	trimmed := strings.TrimSpace(line)
-	if strings.HasPrefix(trimmed, "- ") {
-		return true
-	}
-	matched, _ := regexp.MatchString(`^\d+\.\s`, trimmed)
-	return matched
 }
 
 // Process a block of list lines using the two-pass algorithm
@@ -141,7 +135,8 @@ func processListBlock(lines []string) string {
 	depthToIndex := make(map[int]int)
 
 	for _, line := range lines {
-		if !isListLine(line) {
+		ln := strings.TrimSpace(line)
+		if !isListLine(ln) {
 			continue // Skip empty lines
 		}
 
@@ -300,67 +295,50 @@ func processListBlock(lines []string) string {
 		}
 	}
 
-	// Close all remaining open lists
+	// Close all remaining open lists and list items
 	for i := len(openTags) - 1; i >= 0; i-- {
 		listType := openTags[i]
 		blockIndent := strings.Repeat(" ", i*8)
 		result.WriteString(blockIndent + fmt.Sprintf("</%s>", listType) + "\n")
+
+		// If this list is nested (not the outermost), close the <li> that contains it
+		if i > 0 {
+			liIndent := strings.Repeat(" ", (i-1)*8+4)
+			result.WriteString(liIndent + "</li>\n")
+		}
 	}
 
 	return result.String()
 }
 
-func processSingleLine(line string) (string, string) {
+func processSingleLine(line string) string {
 	trimmed := strings.TrimSpace(line)
 
 	// Empty lines
 	if trimmed == "" {
-		return "empty", ""
+		return ""
 	}
 
 	// Headers
 	if strings.HasPrefix(trimmed, "#### ") {
 		content := strings.TrimPrefix(trimmed, "#### ")
-		return "h4", fmt.Sprintf("<h4>%s</h4>", processInlineElements(content))
+		return fmt.Sprintf("<h4>%s</h4>", processInlineElements(content))
 	}
 	if strings.HasPrefix(trimmed, "### ") {
 		content := strings.TrimPrefix(trimmed, "### ")
-		return "h3", fmt.Sprintf("<h3>%s</h3>", processInlineElements(content))
+		return fmt.Sprintf("<h3>%s</h3>", processInlineElements(content))
 	}
 	if strings.HasPrefix(trimmed, "## ") {
 		content := strings.TrimPrefix(trimmed, "## ")
-		return "h2", fmt.Sprintf("<h2>%s</h2>", processInlineElements(content))
+		return fmt.Sprintf("<h2>%s</h2>", processInlineElements(content))
 	}
 	if strings.HasPrefix(trimmed, "# ") {
 		content := strings.TrimPrefix(trimmed, "# ")
-		return "h1", fmt.Sprintf("<h1>%s</h1>", processInlineElements(content))
-	}
-
-	// Ordered lists
-	if matched, _ := regexp.MatchString(`^\d+\.\s`, trimmed); matched {
-		re := regexp.MustCompile(`^\d+\.\s(.*)`)
-		matches := re.FindStringSubmatch(trimmed)
-		if len(matches) > 1 {
-			return "ol", fmt.Sprintf("    <li>%s</li>", processInlineElements(matches[1]))
-		}
-	}
-
-	// Unordered lists (with proper indentation handling)
-	if strings.HasPrefix(trimmed, "- ") {
-		content := strings.TrimPrefix(trimmed, "- ")
-		indent := len(line) - len(strings.TrimLeft(line, " \t"))
-		indentation := "    "
-		if indent > 0 {
-			// Add extra indentation for nested items based on depth
-			for i := 0; i < indent/2; i++ {
-				indentation += "    "
-			}
-		}
-		return "ul", fmt.Sprintf("%s<li>%s</li>", indentation, processInlineElements(content))
+		return fmt.Sprintf("<h1>%s</h1>", processInlineElements(content))
 	}
 
 	// Regular paragraphs
-	return "p", fmt.Sprintf("<p>%s</p>", processInlineElements(trimmed))
+	return fmt.Sprintf("<p>%s</p>", processInlineElements(trimmed))
 }
 
 func processInlineElements(text string) string {
