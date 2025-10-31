@@ -3,21 +3,23 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 )
 
 func main() {
-	var inputFile = flag.String("input", "", "Input Markdown file (required)")
+	var help = flag.Bool("help", false, "Show help information")
+	var inputFile = flag.String("input", "", "Input Markdown file (stdin if not specified)")
 	var outputFile = flag.String("output", "", "Output HTML file (stdout if not specified)")
-	var templateFile = flag.String("template", "", "HTML template file with %title% and %content% placeholders")
-	var title = flag.String("title", "", "Title for the HTML document")
+	var templateFile = flag.String("template", "", "HTML template file with %title% and %content% placeholders (optional)")
+	var title = flag.String("title", "", "Title for the HTML document (optional)")
 	flag.Parse()
 
-	if *inputFile == "" {
+	if *help {
 		fmt.Println("Usage: md2html -input <markdown-file> [-output <html-file>] [-template <template-file>] [-title <title>]")
-		fmt.Println("  -input     Input Markdown file (required)")
+		fmt.Println("  -input     Input Markdown file (stdin if not specified)")
 		fmt.Println("  -output    Output HTML file (stdout if not specified)")
-		fmt.Println("  -template  HTML template file with {{.Title}} and {{.Content}} placeholders")
+		fmt.Println("  -template  HTML template file with {{.Title}} and {{.Content}} placeholders (optional)")
 		fmt.Println("  -title     Title for the HTML document")
 		os.Exit(1)
 	}
@@ -30,9 +32,15 @@ func main() {
 }
 
 func ConvertMarkdown(inputFile, outputFile, templateFile, title string) error {
-	content, err := os.ReadFile(inputFile)
+	var content []byte
+	var err error
+	if inputFile == "" {
+		content, err = io.ReadAll(os.Stdin)
+	} else {
+		content, err = os.ReadFile(inputFile)
+	}
 	if err != nil {
-		return fmt.Errorf("error reading file: %w", err)
+		return fmt.Errorf("error reading input: %w", err)
 	}
 
 	// Read or assign default template
@@ -47,10 +55,7 @@ func ConvertMarkdown(inputFile, outputFile, templateFile, title string) error {
 	} else {
 		templateContent = `<!DOCTYPE html>
 <html>
-<head>
-	<meta charset=\"UTF-8\">
-	<title>{{ .Title }}</title>
-</head>
+<head><meta charset="UTF-8"><title>{{ .Title }}</title></head>
 <body>
 {{ .Content }}
 </body>
