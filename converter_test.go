@@ -254,8 +254,9 @@ func TestUnorderedListConversion(t *testing.T) {
 		expected []string
 	}{
 		{
-			name:     "01 Single item list",
-			markdown: []string{"- Item 1"},
+			name: "01 Single item list",
+			markdown: []string{
+				"- Item 1"},
 			expected: []string{
 				"<ul>",
 				"—<li>Item 1</li>",
@@ -299,15 +300,15 @@ func TestUnorderedListConversion(t *testing.T) {
 			name: "04 Different spaces for nesting",
 			markdown: []string{
 				"   - First level",
-				"       - Second level",
-				"       - Third level",
+				"       - Second level 1",
+				"       - Second level 2",
 				"                 - Third level"},
 			expected: []string{
 				"<ul>",
 				"—<li>First level",
 				"——<ul>",
-				"———<li>Second level</li>",
-				"———<li>Third level",
+				"———<li>Second level 1</li>",
+				"———<li>Second level 2",
 				"————<ul>",
 				"—————<li>Third level</li>",
 				"————</ul>",
@@ -399,6 +400,18 @@ func TestOrderedListConversion(t *testing.T) {
 				"—<li>Install <code>package</code></li>",
 				"—<li>Run <code>build</code></li>",
 				"</ol>", ""},
+		},
+		{
+			name: "05 List with paragraph bellow",
+			markdown: []string{
+				"1. First",
+				"Hello World"},
+			expected: []string{
+				"<ol>",
+				"—<li>First</li>",
+				"</ol>",
+				"<p>Hello World</p>",
+				""},
 		},
 	}
 
@@ -539,7 +552,7 @@ func TestCodeBlockConversion(t *testing.T) {
 				""},
 		},
 		{
-			name: " 05 Unclosed code block",
+			name: "05 Unclosed code block",
 			markdown: []string{
 				"```",
 				"const x = 5",
@@ -549,6 +562,82 @@ func TestCodeBlockConversion(t *testing.T) {
 				"<pre><code>const x = 5",
 				"/* without closing hyphens */</code></pre>",
 				"</section>\n"},
+		},
+		{
+			name: "06 HTML code block",
+			markdown: []string{
+				"```",
+				"<header class='intro'>",
+				"    <a href='abc.com?a=1&b=2'>Link</a>",
+				"</header>",
+				"```"},
+			expected: []string{
+				"<section class=\"code\">",
+				"<pre><code>&lt;header class=&#39;intro&#39;&gt;",
+				"    &lt;a href=&#39;abc.com?a=1&amp;b=2&#39;&gt;Link&lt;/a&gt;",
+				"&lt;/header&gt;</code></pre>",
+				"</section>",
+				""},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "—", "    ")
+			markdown := strings.Join(tt.markdown, "\n")
+			td.Cmp(t, GenerateHtmlBody(markdown), expected)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Block - Lists with Code
+// ---------------------------------------------------------------------------
+
+func TestListWithCodeBlockConversion(t *testing.T) {
+	tests := []struct {
+		name     string
+		markdown []string
+		expected []string
+	}{
+		{
+			name: "01 One line code in single point list",
+			markdown: []string{
+				"2. Create `001` migration",
+				"   ```",
+				"   migrate create -ext sql -dir ./migrations -seq \"Create Sets table\"",
+				"   ```"},
+			expected: []string{
+				"<ol>",
+				"—<li>Create <code>001</code> migration",
+				"——<section class=\"code\">",
+				"——<pre><code>migrate create -ext sql -dir ./migrations -seq &quot;Create Sets table&quot;</code></pre>",
+				"——</section>",
+				"—</li>",
+				"</ol>",
+				""},
+		},
+		{
+			name: "02 Code block (3lines) separated with space in ordered list",
+			markdown: []string{
+				"2. Second step with `code`",
+				"",
+				"```",
+				"func main() {",
+				"      fmt.Println(\"Hello\")",
+				"}",
+				"```"},
+			expected: []string{
+				"<ol>",
+				"—<li>Second step with <code>code</code>",
+				"——<section class=\"code\">",
+				"——<pre><code>func main() {",
+				"      fmt.Println(&quot;Hello&quot;)",
+				"}</code></pre>",
+				"——</section>",
+				"—</li>",
+				"</ol>",
+				""},
 		},
 	}
 
@@ -656,8 +745,19 @@ Visit https://github.com for more info.`
 		td.Contains("<h2>Section 2</h2>"),
 		td.Contains("<h3>Nested subsection</h3>"),
 		td.Contains("<h4>Level four - Nested subsection</h4>"),
-		td.Contains("<ol>│    <li>First step</li>│    <li>Second step with <code>code</code></li>│</ol>"),
-		td.Contains("<section class=\"code\">│<pre><code>func main() {│    fmt.Println(&quot;Hello&quot;)│}</code></pre>│</section>"),
+		td.Contains(
+			strings.Join([]string{
+				"<ol>",
+				"    <li>First step</li>",
+				"    <li>Second step with <code>code</code>",
+				"        <section class=\"code\">",
+				"        <pre><code>func main() {",
+				"    fmt.Println(&quot;Hello&quot;)",
+				"}</code></pre>",
+				"        </section>",
+				"    </li>",
+				"</ol>",
+			}, "│")),
 		td.Contains("<p>Visit <a href=\"https://github.com\">https://github.com</a> for more info.</p>"),
 	))
 }

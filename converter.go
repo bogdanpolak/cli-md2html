@@ -50,16 +50,31 @@ type ListLevel struct {
 }
 
 func isCodeLine(ln string) bool {
-	return ln == "```"
+	trimmed := strings.TrimSpace(ln)
+	return trimmed == "```"
 }
 
 func isListLine(ln string) bool {
-	s := strings.Trim(string(ln), " ")
-	if strings.HasPrefix(s, "- ") {
+	if strings.HasPrefix(ln, "- ") {
 		return true
 	}
-	matched, _ := regexp.MatchString(`^\d+\.\s`, s)
+	matched, _ := regexp.MatchString(`^\d+\.\s`, ln)
 	return matched
+}
+
+func isInsideListBlock(ln string, insideCodeBlock *bool) bool {
+	trimmed := strings.TrimSpace(ln)
+	if isCodeLine(trimmed) {
+		*insideCodeBlock = !*insideCodeBlock
+		return true
+	}
+	if *insideCodeBlock {
+		return true
+	}
+	if isListLine(trimmed) || trimmed == "" {
+		return true
+	}
+	return false
 }
 
 // converts markdown to HTML content (main converter function)
@@ -74,24 +89,17 @@ func GenerateHtmlBody(markdown string) string {
 
 		// Handle multiline code blocks (```)
 		if isCodeLine(currentLine) {
-			codeBlock := []string{}
-			lineIdx++
-			for lineIdx < len(lines) && !isCodeLine(lines[lineIdx]) {
-				codeBlock = append(codeBlock, lines[lineIdx])
-				lineIdx++
-			}
-			result.WriteString("<section class=\"code\">\n<pre><code>")
-			result.WriteString(escapeHTML(strings.Join(codeBlock, "\n")))
-			result.WriteString("</code></pre>\n</section>\n")
-			lineIdx++ // Skip closing ``` if it exists
+			newIdx, codeBlock := processCodeBlock(lineIdx, lines, "")
+			result.WriteString(codeBlock)
+			lineIdx = newIdx
 			continue
 		}
 
 		// Check if this line starts a list block
-		if isListLine(currentLine) {
-			listBlock := []string{currentLine}
-			lineIdx++
-			for lineIdx < len(lines) && (isListLine(lines[lineIdx])) {
+		if isListLine(strings.TrimSpace(currentLine)) {
+			listBlock := []string{}
+			isInsideCode := false
+			for lineIdx < len(lines) && isInsideListBlock(lines[lineIdx], &isInsideCode) {
 				listBlock = append(listBlock, lines[lineIdx])
 				lineIdx++
 			}
@@ -124,155 +132,83 @@ func GenerateHtmlBody(markdown string) string {
 	return result.String()
 }
 
+func processCodeBlock(lineIdx int, lines []string, indentation string) (int, string) {
+	var codeBlock strings.Builder
+	ln := lines[lineIdx]
+	depth := getLineDepth(ln)
+	lineIdx++
+	startIdx := lineIdx
+	for lineIdx < len(lines) && !isCodeLine(lines[lineIdx]) {
+		lineIdx++
+	}
+	if startIdx < lineIdx {
+		codeBlock.WriteString(indentation + "<section class=\"code\">\n" + indentation + "<pre><code>")
+		for idx := startIdx; idx < lineIdx; idx++ {
+			codeBlock.WriteString(escapeHTML(lines[idx][depth:]))
+			if idx < lineIdx-1 {
+				codeBlock.WriteString("\n")
+			}
+		}
+		codeBlock.WriteString("</code></pre>\n" + indentation + "</section>\n")
+	}
+
+	lineIdx++ // Skip closing ```
+	return lineIdx, codeBlock.String()
+}
+
+func getLineDepth(ln string) int {
+	depth := 0
+	for _, char := range ln {
+		switch char {
+		case ' ':
+			depth++
+		case '\t':
+			depth += 4
+		default:
+			return depth
+		}
+	}
+	return depth
+}
+
 // Process a block of list lines using the two-pass algorithm
 func processListBlock(lines []string) string {
 	if len(lines) == 0 {
 		return ""
 	}
 
-	// First pass: detect indentation depths and list types
-	levels := []ListLevel{}
-	depthToIndex := make(map[int]int)
+	var result strings.Builder
+	openTags := []string{} // Track open list tags for proper closing
 
-	for _, line := range lines {
-		ln := strings.TrimSpace(line)
-		if !isListLine(ln) {
-			continue // Skip empty lines
+	lineIdx := 0
+	level := 0
+	for lineIdx < len(lines) {
+		currentLine := lines[lineIdx]
+		trimmed := strings.TrimSpace(currentLine)
+		currentDepth := getLineDepth(currentLine)
+
+		if trimmed == "" {
+			lineIdx++
+			continue
 		}
 
-		// Calculate depth (tabs count as 4 spaces)
-		depth := 0
-		for _, char := range line {
-			if char == ' ' {
-				depth++
-			} else if char == '\t' {
-				depth += 4
-			} else {
-				break
-			}
-		}
-
-		// Check if we've seen this depth before
-		if _, exists := depthToIndex[depth]; !exists {
-			// New depth level - determine list type from first occurrence
-			trimmed := strings.TrimSpace(line)
-			listType := "ol" // default
+		if lineIdx == 0 {
+			listType := "ol"
 			if strings.HasPrefix(trimmed, "- ") {
 				listType = "ul"
 			}
 
-			// Add to levels and create mapping
-			depthToIndex[depth] = len(levels)
-			levels = append(levels, ListLevel{Depth: depth, ListType: listType})
-		}
-	}
-
-	// Sort levels by depth
-	for i := 0; i < len(levels)-1; i++ {
-		for j := i + 1; j < len(levels); j++ {
-			if levels[i].Depth > levels[j].Depth {
-				levels[i], levels[j] = levels[j], levels[i]
-			}
-		}
-	}
-
-	// Rebuild depth to index mapping after sorting
-	depthToIndex = make(map[int]int)
-	for i, level := range levels {
-		depthToIndex[level.Depth] = i
-	}
-
-	// Second pass: generate HTML
-	var result strings.Builder
-	currentLevel := -1
-	openTags := []string{} // Track open list tags for proper closing
-
-	// Collect only the list lines for processing
-	listItems := []string{}
-	for _, line := range lines {
-		if isListLine(line) {
-			listItems = append(listItems, line)
-		}
-	}
-
-	for i, line := range listItems {
-		// Calculate depth
-		depth := 0
-	depthLoop:
-		for _, char := range line {
-			switch char {
-			case ' ':
-				depth++
-			case '\t':
-				depth += 4
-			default:
-				break depthLoop
-			}
-		}
-
-		levelIndex := depthToIndex[depth]
-
-		// Look ahead to see if next item is deeper (for nested lists)
-		nextIsDeeper := false
-		if i+1 < len(listItems) {
-			nextDepth := 0
-		nextDepthLoop:
-			for _, char := range listItems[i+1] {
-				switch char {
-				case ' ':
-					nextDepth++
-				case '\t':
-					nextDepth += 4
-				default:
-					break nextDepthLoop
-				}
-			}
-			nextLevelIndex := depthToIndex[nextDepth]
-			nextIsDeeper = nextLevelIndex > levelIndex
-		}
-
-		// Handle level changes
-		if levelIndex > currentLevel {
-			// Going deeper - open new nested lists
-			for currentLevel < levelIndex {
-				currentLevel++
-				level := levels[currentLevel]
-
-				// Calculate indentation for block elements (ul/ol): 0, 8, 16, ...
-				blockIndent := strings.Repeat(" ", currentLevel*8)
-
-				tag := fmt.Sprintf("<%s>", level.ListType)
-				result.WriteString(blockIndent + tag + "\n")
-				openTags = append(openTags, level.ListType)
-			}
-		} else if levelIndex < currentLevel {
-			// Going shallower - close current item first, then close nested lists
-			result.WriteString("</li>\n")
-
-			// Close nested lists
-			for currentLevel > levelIndex {
-				if len(openTags) > 0 {
-					listType := openTags[len(openTags)-1]
-					blockIndent := strings.Repeat(" ", currentLevel*8)
-					result.WriteString(blockIndent + fmt.Sprintf("</%s>", listType) + "\n")
-					openTags = openTags[:len(openTags)-1]
-				}
-				currentLevel--
-			}
-
-			// Close the parent <li>
-			liIndent := strings.Repeat(" ", levelIndex*8+4)
-			result.WriteString(liIndent + "</li>\n")
-		} else if currentLevel >= 0 {
-			// Same level - close previous <li>
-			result.WriteString("</li>\n")
+			// Calculate indentation for block elements (ul/ol): 0, 8, 16, ...
+			blockIndent := strings.Repeat(" ", level*8)
+			tag := fmt.Sprintf("<%s>", listType)
+			result.WriteString(blockIndent + tag + "\n")
+			openTags = append(openTags, listType)
 		}
 
 		// Extract and process list item content
-		trimmed := strings.TrimSpace(line)
 		var content string
-		if strings.HasPrefix(trimmed, "- ") {
-			content = strings.TrimPrefix(trimmed, "- ")
+		if after, ok := strings.CutPrefix(trimmed, "- "); ok {
+			content = after
 		} else {
 			// Ordered list - remove number and dot
 			re := regexp.MustCompile(`^\d+\.\s(.*)`)
@@ -283,16 +219,69 @@ func processListBlock(lines []string) string {
 		}
 
 		// Generate <li> with proper indentation: 4, 12, 20, ...
-		liIndent := strings.Repeat(" ", levelIndex*8+4)
-		result.WriteString(fmt.Sprintf("%s<li>%s", liIndent, processInlineElements(content)))
+		lineIndent := strings.Repeat(" ", level*8+4)
+		result.WriteString(fmt.Sprintf("%s<li>%s", lineIndent, processInlineElements(content)))
 
-		// Only add newline here - closing </li> will be handled by next iteration or at the end
-		if nextIsDeeper {
-			result.WriteString("\n") // Just a newline before nested content
-		} else if i == len(listItems)-1 {
-			// Last item - close it
+		// Move to next line and skip empty lines
+		lineIdx++
+		for lineIdx < len(lines) && strings.TrimSpace(lines[lineIdx]) == "" {
+			lineIdx++
+		}
+
+		// Look ahead to see if next item is deeper (for nested lists)
+		nextDepth := -1
+		nextIsCode := false
+		if lineIdx < len(lines) {
+			// skip empty lines
+			line := lines[lineIdx]
+			isNextListLine := isListLine(strings.TrimSpace(line))
+			nextIsCode = isCodeLine(line)
+			nextDepth = getLineDepth(line)
+			if nextIsCode || !isNextListLine {
+				nextDepth = currentDepth
+			}
+		}
+
+		if nextIsCode {
+			blockIndent := strings.Repeat(" ", level*8+8)
+			newIdx, codeBlock := processCodeBlock(lineIdx, lines, blockIndent)
+			result.WriteString("\n" + codeBlock + lineIndent)
+			lineIdx = newIdx
+		}
+
+		isNextLineIsDeeperList := nextDepth >= 0 && nextDepth > currentDepth
+		isNextLineIsShallowerList := nextDepth >= 0 && level >= 0 && nextDepth < currentDepth
+		if isNextLineIsDeeperList {
+			level++
+			listType := "ol"
+			if strings.HasPrefix(strings.TrimSpace(lines[lineIdx]), "- ") {
+				listType = "ul"
+			}
+
+			// Calculate indentation for block elements (ul/ol): 0, 8, 16, ...
+			blockIndent := strings.Repeat(" ", level*8)
+			tag := fmt.Sprintf("<%s>", listType)
+			result.WriteString("\n" + blockIndent + tag + "\n")
+			openTags = append(openTags, listType)
+		} else if isNextLineIsShallowerList {
+			result.WriteString("</li>\n")
+
+			// Close nested list
+			if len(openTags) > 0 {
+				listType := openTags[len(openTags)-1]
+				blockIndent := strings.Repeat(" ", level*8)
+				result.WriteString(blockIndent + fmt.Sprintf("</%s>", listType) + "\n")
+				openTags = openTags[:len(openTags)-1]
+			}
+			// Close the parent <li>
+			level--
+			blockIndent := strings.Repeat(" ", level*8+4)
+			result.WriteString(blockIndent + "</li>\n")
+		} else if level >= 0 {
+			// Same level - close previous <li>
 			result.WriteString("</li>\n")
 		}
+
 	}
 
 	// Close all remaining open lists and list items
@@ -303,8 +292,8 @@ func processListBlock(lines []string) string {
 
 		// If this list is nested (not the outermost), close the <li> that contains it
 		if i > 0 {
-			liIndent := strings.Repeat(" ", (i-1)*8+4)
-			result.WriteString(liIndent + "</li>\n")
+			blockIndent := strings.Repeat(" ", (i-1)*8+4)
+			result.WriteString(blockIndent + "</li>\n")
 		}
 	}
 
