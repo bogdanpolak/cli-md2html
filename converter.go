@@ -80,9 +80,9 @@ func GenerateHtmlBody(markdown string) string {
 				codeBlock = append(codeBlock, lines[lineIdx])
 				lineIdx++
 			}
-			result.WriteString("<div class=\"source-code\">\n<pre><code>")
+			result.WriteString("<section class=\"code\">\n<pre><code>")
 			result.WriteString(escapeHTML(strings.Join(codeBlock, "\n")))
-			result.WriteString("</code></pre>\n</div>\n")
+			result.WriteString("</code></pre>\n</section>\n")
 			lineIdx++ // Skip closing ``` if it exists
 			continue
 		}

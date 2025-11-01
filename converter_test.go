@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	td "github.com/maxatome/go-testdeep/td"
+	"github.com/maxatome/go-testdeep/td"
 )
 
 // ---------------------------------------------------------------------------
@@ -485,9 +485,9 @@ func TestCodeBlockConversion(t *testing.T) {
 				"code here",
 				"```"},
 			expected: []string{
-				"<div class=\"source-code\">",
+				"<section class=\"code\">",
 				"<pre><code>code here</code></pre>",
-				"</div>",
+				"</section>",
 				""},
 		},
 		{
@@ -499,11 +499,11 @@ func TestCodeBlockConversion(t *testing.T) {
 				"}",
 				"```"},
 			expected: []string{
-				"<div class=\"source-code\">",
+				"<section class=\"code\">",
 				"<pre><code>func main() {",
 				"    fmt.Println(&quot;Hello&quot;)",
 				"}</code></pre>",
-				"</div>",
+				"</section>",
 				""},
 		},
 		{
@@ -513,9 +513,9 @@ func TestCodeBlockConversion(t *testing.T) {
 				"<div>test</div>",
 				"```"},
 			expected: []string{
-				"<div class=\"source-code\">",
+				"<section class=\"code\">",
 				"<pre><code>&lt;div&gt;test&lt;/div&gt;</code></pre>",
-				"</div>",
+				"</section>",
 				""},
 		},
 		{
@@ -529,13 +529,13 @@ func TestCodeBlockConversion(t *testing.T) {
 				"second",
 				"```"},
 			expected: []string{
-				"<div class=\"source-code\">",
+				"<section class=\"code\">",
 				"<pre><code>first</code></pre>",
-				"</div>",
+				"</section>",
 				"",
-				"<div class=\"source-code\">",
+				"<section class=\"code\">",
 				"<pre><code>second</code></pre>",
-				"</div>",
+				"</section>",
 				""},
 		},
 		{
@@ -545,10 +545,10 @@ func TestCodeBlockConversion(t *testing.T) {
 				"const x = 5",
 				"/* without closing hyphens */"},
 			expected: []string{
-				"<div class=\"source-code\">",
+				"<section class=\"code\">",
 				"<pre><code>const x = 5",
 				"/* without closing hyphens */</code></pre>",
-				"</div>\n"},
+				"</section>\n"},
 		},
 	}
 
@@ -646,29 +646,18 @@ Visit https://github.com for more info.`
 
 	result := GenerateHtmlBody(markdown)
 
+	result = strings.ReplaceAll(result, "\n", "│")
 	td.Cmp(t, result, td.All(
 		td.Contains("<h1>Main Title</h1>"),
 		td.Contains("<p>This is an introduction with a <a href=\"https://example.com\">link</a> and some <code>inline code</code>.</p>"),
 		td.Contains("<h2>Section 1</h2>"),
 		td.Contains("<p>Some text with <code>npm install</code> command.</p>"),
-		td.Contains("<ul>"),
-		td.Contains("<li>Install dependencies</li>"),
-		td.Contains("<li>Run tests</li>"),
-		td.Contains("<li>Deploy</li>"),
-		td.Contains("</ul>"),
+		td.Contains("<ul>│    <li>Install dependencies</li>│    <li>Run tests</li>│    <li>Deploy</li>│</ul>"),
 		td.Contains("<h2>Section 2</h2>"),
 		td.Contains("<h3>Nested subsection</h3>"),
 		td.Contains("<h4>Level four - Nested subsection</h4>"),
-		td.Contains("<ol>"),
-		td.Contains("<li>First step</li>"),
-		td.Contains("<li>Second step with <code>code</code></li>"),
-		td.Contains("</ol>"),
-		td.Contains(`<div class="source-code">
-<pre><code>func main() {
-    fmt.Println(&quot;Hello&quot;)
-}</code></pre>
-</div>
-`),
+		td.Contains("<ol>│    <li>First step</li>│    <li>Second step with <code>code</code></li>│</ol>"),
+		td.Contains("<section class=\"code\">│<pre><code>func main() {│    fmt.Println(&quot;Hello&quot;)│}</code></pre>│</section>"),
 		td.Contains("<p>Visit <a href=\"https://github.com\">https://github.com</a> for more info.</p>"),
 	))
 }
