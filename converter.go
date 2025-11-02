@@ -77,6 +77,10 @@ func isInsideListBlock(ln string, insideCodeBlock *bool) bool {
 	return false
 }
 
+func createIndentation(steps int) string {
+	return strings.Repeat("    ", steps)
+}
+
 // converts markdown to HTML content (main converter function)
 func GenerateHtmlBody(markdown string) string {
 	var result strings.Builder
@@ -199,7 +203,7 @@ func processListBlock(lines []string) string {
 			}
 
 			// Calculate indentation for block elements (ul/ol): 0, 8, 16, ...
-			blockIndent := strings.Repeat(" ", level*8)
+			blockIndent := createIndentation(2 * level)
 			tag := fmt.Sprintf("<%s>", listType)
 			result.WriteString(blockIndent + tag + "\n")
 			openTags = append(openTags, listType)
@@ -219,7 +223,7 @@ func processListBlock(lines []string) string {
 		}
 
 		// Generate <li> with proper indentation: 4, 12, 20, ...
-		lineIndent := strings.Repeat(" ", level*8+4)
+		lineIndent := createIndentation(2*level + 1)
 		result.WriteString(fmt.Sprintf("%s<li>%s", lineIndent, processInlineElements(content)))
 
 		// Move to next line and skip empty lines
@@ -243,7 +247,7 @@ func processListBlock(lines []string) string {
 		}
 
 		if nextIsCode {
-			blockIndent := strings.Repeat(" ", level*8+8)
+			blockIndent := createIndentation(2 + 2*level)
 			newIdx, codeBlock := processCodeBlock(lineIdx, lines, blockIndent)
 			result.WriteString("\n" + codeBlock + lineIndent)
 			lineIdx = newIdx
@@ -259,7 +263,7 @@ func processListBlock(lines []string) string {
 			}
 
 			// Calculate indentation for block elements (ul/ol): 0, 8, 16, ...
-			blockIndent := strings.Repeat(" ", level*8)
+			blockIndent := createIndentation(2 * level)
 			tag := fmt.Sprintf("<%s>", listType)
 			result.WriteString("\n" + blockIndent + tag + "\n")
 			openTags = append(openTags, listType)
@@ -269,13 +273,13 @@ func processListBlock(lines []string) string {
 			// Close nested list
 			if len(openTags) > 0 {
 				listType := openTags[len(openTags)-1]
-				blockIndent := strings.Repeat(" ", level*8)
+				blockIndent := createIndentation(2 * level)
 				result.WriteString(blockIndent + fmt.Sprintf("</%s>", listType) + "\n")
 				openTags = openTags[:len(openTags)-1]
 			}
 			// Close the parent <li>
 			level--
-			blockIndent := strings.Repeat(" ", level*8+4)
+			blockIndent := createIndentation(2*level + 1)
 			result.WriteString(blockIndent + "</li>\n")
 		} else if level >= 0 {
 			// Same level - close previous <li>
@@ -287,12 +291,12 @@ func processListBlock(lines []string) string {
 	// Close all remaining open lists and list items
 	for i := len(openTags) - 1; i >= 0; i-- {
 		listType := openTags[i]
-		blockIndent := strings.Repeat(" ", i*8)
+		blockIndent := createIndentation(2 * i)
 		result.WriteString(blockIndent + fmt.Sprintf("</%s>", listType) + "\n")
 
 		// If this list is nested (not the outermost), close the <li> that contains it
 		if i > 0 {
-			blockIndent := strings.Repeat(" ", (i-1)*8+4)
+			blockIndent := createIndentation(2*i - 1)
 			result.WriteString(blockIndent + "</li>\n")
 		}
 	}
