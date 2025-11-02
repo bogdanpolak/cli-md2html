@@ -7,16 +7,42 @@ import (
 	"github.com/maxatome/go-testdeep/td"
 )
 
+type simpleTestCase struct {
+	name     string
+	markdown string
+	expected string
+}
+
+type multilineTestCase struct {
+	name     string
+	markdown []string
+	expected []string
+}
+
+const indentHtmlWith4Spaces = "    "
+
+func (tt multilineTestCase) toString(indentation string) (string, string) {
+	expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "•", indentation)
+	markdown := strings.Join(tt.markdown, "\n")
+	return expected, markdown
+}
+
 // ---------------------------------------------------------------------------
 // Simple conversions
 // ---------------------------------------------------------------------------
 
 func TestSimpleConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		markdown string
-		expected string
-	}{
+	tests := []simpleTestCase{
+		{
+			name:     "01 Empty markup",
+			markdown: "",
+			expected: "\n",
+		},
+		{
+			name:     "02 Random Single line Text",
+			markdown: "Lorem impsum dolor sit amet.",
+			expected: "<p>Lorem impsum dolor sit amet.</p>\n",
+		},
 		{
 			name:     "01 Empty markup",
 			markdown: "",
@@ -56,11 +82,7 @@ func TestSimpleConversion(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestHeaderConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		markdown string
-		expected string
-	}{
+	tests := []simpleTestCase{
 		{
 			name:     "01 H1 header",
 			markdown: "# Main Title",
@@ -100,41 +122,37 @@ func TestHeaderConversion(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInlineCodeConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
+	tests := []simpleTestCase{
 		{
 			name:     "Inline_code_simple",
-			input:    "`function()`",
+			markdown: "`function()`",
 			expected: "<p><code>function()</code></p>",
 		},
 		{
 			name:     "Inline_code_Multiple_elements",
-			input:    "Call function `foo()` and `bar()`",
+			markdown: "Call function `foo()` and `bar()`",
 			expected: "<p>Call function <code>foo()</code> and <code>bar()</code></p>",
 		},
 		{
 			name:     "Inline_code_with_special_chars",
-			input:    "Use `<tag>`",
+			markdown: "Use `<tag>`",
 			expected: "<p>Use <code>&lt;tag&gt;</code></p>",
 		},
 		{
 			name:     "Inline_code_at_start",
-			input:    "`code` at start",
+			markdown: "`code` at start",
 			expected: "<p><code>code</code> at start</p>",
 		},
 		{
 			name:     "Inline_code_at_end",
-			input:    "at end `code`",
+			markdown: "at end `code`",
 			expected: "<p>at end <code>code</code></p>",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			td.Cmp(t, processSingleLine(tt.input), tt.expected)
+			td.Cmp(t, processSingleLine(tt.markdown), tt.expected)
 		})
 	}
 }
@@ -144,41 +162,37 @@ func TestInlineCodeConversion(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestLinkConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
+	tests := []simpleTestCase{
 		{
 			name:     "Markdown link",
-			input:    "[GitHub](https://github.com)",
+			markdown: "[GitHub](https://github.com)",
 			expected: `<p><a href="https://github.com">GitHub</a></p>`,
 		},
 		{
 			name:     "Auto-detected HTTPS URL",
-			input:    "Visit https://example.com to get started",
+			markdown: "Visit https://example.com to get started",
 			expected: `<p>Visit <a href="https://example.com">https://example.com</a> to get started</p>`,
 		},
 		{
 			name:     "Auto-detected HTTP URL",
-			input:    "Go to http://example.com",
+			markdown: "Go to http://example.com",
 			expected: `<p>Go to <a href="http://example.com">http://example.com</a></p>`,
 		},
 		{
 			name:     "Multiple links",
-			input:    "[Google](https://google.com) and [Bing](https://bing.com)",
+			markdown: "[Google](https://google.com) and [Bing](https://bing.com)",
 			expected: `<p><a href="https://google.com">Google</a> and <a href="https://bing.com">Bing</a></p>`,
 		},
 		{
 			name:     "Link with special chars in URL",
-			input:    "[Docs](https://example.com/docs?id=123&format=html)",
+			markdown: "[Docs](https://example.com/docs?id=123&format=html)",
 			expected: `<p><a href="https://example.com/docs?id=123&amp;format=html">Docs</a></p>`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			td.Cmp(t, processSingleLine(tt.input), tt.expected)
+			td.Cmp(t, processSingleLine(tt.markdown), tt.expected)
 		})
 	}
 }
@@ -188,57 +202,52 @@ func TestLinkConversion(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestEscapeHTML(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
+	tests := []simpleTestCase{
 		{
 			name:     "Ampersand escape",
-			input:    "Tom & Jerry",
+			markdown: "Tom & Jerry",
 			expected: "<p>Tom &amp; Jerry</p>",
 		},
 		{
 			name:     "Less than escape",
-			input:    "5 < 10",
+			markdown: "5 < 10",
 			expected: "<p>5 &lt; 10</p>",
 		},
 		{
 			name:     "Greater than escape",
-			input:    "10 > 5",
+			markdown: "10 > 5",
 			expected: "<p>10 &gt; 5</p>",
 		},
 		{
 			name:     "Double quote escape",
-			input:    `Say "hello"`,
+			markdown: `Say "hello"`,
 			expected: "<p>Say &quot;hello&quot;</p>",
 		},
 		{
 			name:     "Single quote escape",
-			input:    "It's great",
+			markdown: "It's great",
 			expected: "<p>It&#39;s great</p>",
 		},
 		{
 			name:     "Script tag injection",
-			input:    `<script>alert("XSS")</script>`,
+			markdown: `<script>alert("XSS")</script>`,
 			expected: `<p>&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;</p>`,
 		},
 		{
 			name:     "Multiple special chars",
-			input:    `<script>alert("test & run")</script>`,
+			markdown: `<script>alert("test & run")</script>`,
 			expected: `<p>&lt;script&gt;alert(&quot;test &amp; run&quot;)&lt;/script&gt;</p>`,
 		},
 		{
 			name:     "Empty markup",
-			input:    "",
+			markdown: "",
 			expected: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := processSingleLine(tt.input)
-			td.Cmp(t, result, tt.expected)
+			td.Cmp(t, processSingleLine(tt.markdown), tt.expected)
 		})
 	}
 }
@@ -248,18 +257,14 @@ func TestEscapeHTML(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestUnorderedListConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		markdown []string
-		expected []string
-	}{
+	tests := []multilineTestCase{
 		{
 			name: "01 Single item list",
 			markdown: []string{
 				"- Item 1"},
 			expected: []string{
 				"<ul>",
-				"—<li>Item 1</li>",
+				"•<li>Item 1</li>",
 				"</ul>",
 				""},
 		},
@@ -271,9 +276,9 @@ func TestUnorderedListConversion(t *testing.T) {
 				"- Third"},
 			expected: []string{
 				"<ul>",
-				"—<li>First</li>",
-				"—<li>Second</li>",
-				"—<li>Third</li>",
+				"•<li>First</li>",
+				"•<li>Second</li>",
+				"•<li>Third</li>",
 				"</ul>",
 				""},
 		},
@@ -286,13 +291,13 @@ func TestUnorderedListConversion(t *testing.T) {
 				"- Second"},
 			expected: []string{
 				"<ul>",
-				"—<li>First",
-				"——<ul>",
-				"———<li>First Child</li>",
-				"———<li>Second Child</li>",
-				"——</ul>",
-				"—</li>",
-				"—<li>Second</li>",
+				"•<li>First",
+				"••<ul>",
+				"•••<li>First Child</li>",
+				"•••<li>Second Child</li>",
+				"••</ul>",
+				"•</li>",
+				"•<li>Second</li>",
 				"</ul>",
 				""},
 		},
@@ -305,16 +310,16 @@ func TestUnorderedListConversion(t *testing.T) {
 				"                 - Third level"},
 			expected: []string{
 				"<ul>",
-				"—<li>First level",
-				"——<ul>",
-				"———<li>Second level 1</li>",
-				"———<li>Second level 2",
-				"————<ul>",
-				"—————<li>Third level</li>",
-				"————</ul>",
-				"———</li>",
-				"——</ul>",
-				"—</li>",
+				"•<li>First level",
+				"••<ul>",
+				"•••<li>Second level 1</li>",
+				"•••<li>Second level 2",
+				"••••<ul>",
+				"•••••<li>Third level</li>",
+				"••••</ul>",
+				"•••</li>",
+				"••</ul>",
+				"•</li>",
 				"</ul>",
 				""},
 		},
@@ -324,7 +329,7 @@ func TestUnorderedListConversion(t *testing.T) {
 				"- Run `npm install`"},
 			expected: []string{
 				"<ul>",
-				"—<li>Run <code>npm install</code></li>",
+				"•<li>Run <code>npm install</code></li>",
 				"</ul>",
 				""},
 		},
@@ -334,7 +339,7 @@ func TestUnorderedListConversion(t *testing.T) {
 				"- Visit [GitHub](https://github.com)"},
 			expected: []string{
 				"<ul>",
-				"—<li>Visit <a href=\"https://github.com\">GitHub</a></li>",
+				"•<li>Visit <a href=\"https://github.com\">GitHub</a></li>",
 				"</ul>",
 				""},
 		},
@@ -342,26 +347,21 @@ func TestUnorderedListConversion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "—", "    ")
-			markdown := strings.Join(tt.markdown, "\n")
+			expected, markdown := tt.toString(indentHtmlWith4Spaces)
 			td.Cmp(t, GenerateHtmlBody(markdown), expected)
 		})
 	}
 }
 
 func TestOrderedListConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		markdown []string
-		expected []string
-	}{
+	tests := []multilineTestCase{
 		{
 			name: "01 Single ordered item",
 			markdown: []string{
 				"1. First step"},
 			expected: []string{
 				"<ol>",
-				"—<li>First step</li>",
+				"•<li>First step</li>",
 				"</ol>", ""},
 		},
 		{
@@ -372,9 +372,9 @@ func TestOrderedListConversion(t *testing.T) {
 				"3. Step three"},
 			expected: []string{
 				"<ol>",
-				"—<li>Step one</li>",
-				"—<li>Step two</li>",
-				"—<li>Step three</li>",
+				"•<li>Step one</li>",
+				"•<li>Step two</li>",
+				"•<li>Step three</li>",
 				"</ol>", ""},
 		},
 		{
@@ -385,9 +385,9 @@ func TestOrderedListConversion(t *testing.T) {
 				"7. Originally nr 7"},
 			expected: []string{
 				"<ol>",
-				"—<li>Originally nr 3</li>",
-				"—<li>Originally nr 6</li>",
-				"—<li>Originally nr 7</li>",
+				"•<li>Originally nr 3</li>",
+				"•<li>Originally nr 6</li>",
+				"•<li>Originally nr 7</li>",
 				"</ol>", ""},
 		},
 		{
@@ -397,8 +397,8 @@ func TestOrderedListConversion(t *testing.T) {
 				"2. Run `build`"},
 			expected: []string{
 				"<ol>",
-				"—<li>Install <code>package</code></li>",
-				"—<li>Run <code>build</code></li>",
+				"•<li>Install <code>package</code></li>",
+				"•<li>Run <code>build</code></li>",
 				"</ol>", ""},
 		},
 		{
@@ -408,7 +408,7 @@ func TestOrderedListConversion(t *testing.T) {
 				"Hello World"},
 			expected: []string{
 				"<ol>",
-				"—<li>First</li>",
+				"•<li>First</li>",
 				"</ol>",
 				"<p>Hello World</p>",
 				""},
@@ -417,20 +417,14 @@ func TestOrderedListConversion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "—", "    ")
-			markdown := strings.Join(tt.markdown, "\n")
-			actual := GenerateHtmlBody(markdown)
-			td.Cmp(t, actual, expected)
+			expected, markdown := tt.toString(indentHtmlWith4Spaces)
+			td.Cmp(t, GenerateHtmlBody(markdown), expected)
 		})
 	}
 }
 
 func TestMixedListConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		markdown []string
-		expected []string
-	}{
+	tests := []multilineTestCase{
 		{
 			name: "01. Ordered list with point subitems",
 			markdown: []string{
@@ -439,12 +433,12 @@ func TestMixedListConversion(t *testing.T) {
 				"   - Point Subitem 2.1"},
 			expected: []string{
 				"<ol>",
-				"—<li>Ordered</li>",
-				"—<li>Ordered Two",
-				"——<ul>",
-				"———<li>Point Subitem 2.1</li>",
-				"——</ul>",
-				"—</li>",
+				"•<li>Ordered</li>",
+				"•<li>Ordered Two",
+				"••<ul>",
+				"•••<li>Point Subitem 2.1</li>",
+				"••</ul>",
+				"•</li>",
 				"</ol>",
 				"",
 			},
@@ -458,13 +452,13 @@ func TestMixedListConversion(t *testing.T) {
 				"- Another Main"},
 			expected: []string{
 				"<ul>",
-				"—<li>Main",
-				"——<ol>",
-				"———<li>Ordered One</li>",
-				"———<li>Ordered Two</li>",
-				"——</ol>",
-				"—</li>",
-				"—<li>Another Main</li>",
+				"•<li>Main",
+				"••<ol>",
+				"•••<li>Ordered One</li>",
+				"•••<li>Ordered Two</li>",
+				"••</ol>",
+				"•</li>",
+				"•<li>Another Main</li>",
 				"</ul>",
 				"",
 			},
@@ -473,10 +467,8 @@ func TestMixedListConversion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "—", "    ")
-			markdown := strings.Join(tt.markdown, "\n")
-			actual := GenerateHtmlBody(markdown)
-			td.Cmp(t, actual, expected)
+			expected, markdown := tt.toString(indentHtmlWith4Spaces)
+			td.Cmp(t, GenerateHtmlBody(markdown), expected)
 		})
 	}
 }
@@ -486,11 +478,7 @@ func TestMixedListConversion(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCodeBlockConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		markdown []string
-		expected []string
-	}{
+	tests := []multilineTestCase{
 		{
 			name: "01 Simple",
 			markdown: []string{
@@ -583,8 +571,7 @@ func TestCodeBlockConversion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "—", "    ")
-			markdown := strings.Join(tt.markdown, "\n")
+			expected, markdown := tt.toString(indentHtmlWith4Spaces)
 			td.Cmp(t, GenerateHtmlBody(markdown), expected)
 		})
 	}
@@ -595,11 +582,7 @@ func TestCodeBlockConversion(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestListWithCodeBlockConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		markdown []string
-		expected []string
-	}{
+	tests := []multilineTestCase{
 		{
 			name: "01 One line code in single point list",
 			markdown: []string{
@@ -609,11 +592,11 @@ func TestListWithCodeBlockConversion(t *testing.T) {
 				"   ```"},
 			expected: []string{
 				"<ol>",
-				"—<li>Create <code>001</code> migration",
-				"——<section class=\"code\">",
-				"——<pre><code>migrate create -ext sql -dir ./migrations -seq &quot;Create Sets table&quot;</code></pre>",
-				"——</section>",
-				"—</li>",
+				"•<li>Create <code>001</code> migration",
+				"••<section class=\"code\">",
+				"••<pre><code>migrate create -ext sql -dir ./migrations -seq &quot;Create Sets table&quot;</code></pre>",
+				"••</section>",
+				"•</li>",
 				"</ol>",
 				""},
 		},
@@ -629,22 +612,48 @@ func TestListWithCodeBlockConversion(t *testing.T) {
 				"```"},
 			expected: []string{
 				"<ol>",
-				"—<li>Second step with <code>code</code>",
-				"——<section class=\"code\">",
-				"——<pre><code>func main() {",
+				"•<li>Second step with <code>code</code>",
+				"••<section class=\"code\">",
+				"••<pre><code>func main() {",
 				"      fmt.Println(&quot;Hello&quot;)",
 				"}</code></pre>",
-				"——</section>",
-				"—</li>",
+				"••</section>",
+				"•</li>",
 				"</ol>",
+				""},
+		},
+		{
+			name: "03 Nested list with code block",
+			markdown: []string{
+				"- One",
+				"   - Level Two 1",
+				"   ```",
+				"     var x int = 10",
+				"   ```",
+				"   - Level Two 2",
+				"- Two",
+			},
+			expected: []string{
+				"<ul>",
+				"•<li>One",
+				"••<ul>",
+				"•••<li>Level Two 1",
+				"••••<section class=\"code\">",
+				"••••<pre><code>  var x int = 10</code></pre>",
+				"••••</section>",
+				"•••</li>",
+				"•••<li>Level Two 2</li>",
+				"••</ul>",
+				"•</li>",
+				"•<li>Two</li>",
+				"</ul>",
 				""},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expected := strings.ReplaceAll(strings.Join(tt.expected, "\n"), "—", "    ")
-			markdown := strings.Join(tt.markdown, "\n")
+			expected, markdown := tt.toString(indentHtmlWith4Spaces)
 			td.Cmp(t, GenerateHtmlBody(markdown), expected)
 		})
 	}
