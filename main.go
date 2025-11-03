@@ -57,13 +57,9 @@ func ConvertMarkdown(inputFile, outputFile, templateFile, title string, preview 
 		}
 		templateContent = string(text)
 	} else {
-		templateContent = `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>{{ .Title }}</title></head>
-<body>
-{{ .Content }}
-</body>
-</html>`
+		templateContent = "<!DOCTYPE html>\n" +
+			"<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <title>{{ .Title }}</title>\n</head>\n" +
+			"<body>{{ .Content }}</body>\n</html>"
 	}
 
 	html, err = ConvertMarkdownToHTML(string(content), templateContent, title)
