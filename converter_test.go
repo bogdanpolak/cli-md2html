@@ -108,6 +108,16 @@ func TestHeaderConversion(t *testing.T) {
 			markdown: "## See [docs](https://example.com)",
 			expected: "<h2>See <a href=\"https://example.com\">docs</a></h2>",
 		},
+		{
+			name:     "06 Bold text in header",
+			markdown: "#### Title with **bold** text",
+			expected: "<h4>Title with <strong>bold</strong> text</h4>",
+		},
+		{
+			name:     "07 Italic text in paragraph",
+			markdown: "#### Title with *italic* text",
+			expected: "<h4>Title with <em>italic</em> text</h4>",
+		},
 	}
 
 	for _, tt := range tests {

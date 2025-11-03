@@ -349,6 +349,30 @@ func processInlineElements(text string) string {
 		return placeholder
 	})
 
+	// Bold text - **text**
+	boldMap := make(map[string]string)
+	boldCounter := 0
+	re = regexp.MustCompile(`\*\*([^*]+)\*\*`)
+	text = re.ReplaceAllStringFunc(text, func(match string) string {
+		content := strings.Trim(match, "*")
+		placeholder := fmt.Sprintf("__BOLD_PLACEHOLDER_%d__", boldCounter)
+		boldMap[placeholder] = fmt.Sprintf("<strong>%s</strong>", content)
+		boldCounter++
+		return placeholder
+	})
+
+	// Italic text - *text*
+	italicMap := make(map[string]string)
+	italicCounter := 0
+	re = regexp.MustCompile(`\*([^*]+)\*`)
+	text = re.ReplaceAllStringFunc(text, func(match string) string {
+		content := strings.Trim(match, "*")
+		placeholder := fmt.Sprintf("__ITALIC_PLACEHOLDER_%d__", italicCounter)
+		italicMap[placeholder] = fmt.Sprintf("<em>%s</em>", content)
+		italicCounter++
+		return placeholder
+	})
+
 	// Links (before auto-links to avoid double processing)
 	linkMap := make(map[string]string)
 	linkCounter := 0
@@ -383,6 +407,16 @@ func processInlineElements(text string) string {
 	// Restore code placeholders
 	for placeholder, codeHTML := range codeMap {
 		text = strings.ReplaceAll(text, placeholder, codeHTML)
+	}
+
+	// Restore bold placeholders
+	for placeholder, boldHTML := range boldMap {
+		text = strings.ReplaceAll(text, placeholder, boldHTML)
+	}
+
+	// Restore italic placeholders
+	for placeholder, italicHTML := range italicMap {
+		text = strings.ReplaceAll(text, placeholder, italicHTML)
 	}
 
 	// Restore link placeholders
