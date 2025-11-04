@@ -30,7 +30,8 @@ Feature: Template Processing
       <!DOCTYPE html>
       <html>
       <head><title>Generated document v1</title></head>
-      <body><article><p>This is a sample markdown line.</p></article></body>
+      <body><article><p>This is a sample markdown line.</p>
+      </article></body>
       </html>
       """
 
