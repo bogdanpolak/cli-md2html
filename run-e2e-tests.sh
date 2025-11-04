@@ -54,6 +54,6 @@ npm install
 npm start
 ```
 EOF
-EXPECTED02='<div class="source-code">│<pre><code>npm install│npm start</code></pre>│</div>'
+EXPECTED02='<section class="code">│<pre><code>npm install│npm start</code></pre>│</section>'
 cat test02.md | ./bin/md2html | tr '\n' '│' | grep "$EXPECTED02" > /dev/null && echo "✅ OK "$N02 || echo "❌ Failed "$N02
 rm test02.md
