@@ -163,6 +163,11 @@ func TestBlockQuoteConversion(t *testing.T) {
 			markdown: "> Rule of thumb - actually: Lorem impsum dolor sit amet.",
 			expected: "<blockquote>Rule of thumb - actually: Lorem impsum dolor sit amet.</blockquote>\n",
 		},
+		{
+			name:     "07 Block Quote preserves inline formatting",
+			markdown: "> Use **bold**, *italic*, `code`, and [link](https://example.com)",
+			expected: "<blockquote>Use <strong>bold</strong>, <em>italic</em>, <code>code</code>, and <a href=\"https://example.com\">link</a></blockquote>\n",
+		},
 	}
 
 	for _, tt := range tests {

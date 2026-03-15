@@ -312,6 +312,11 @@ func processSingleLine(line string) string {
 		return ""
 	}
 
+	// Block quotes
+	if strings.HasPrefix(trimmed, ">") {
+		return processBlockQuote(trimmed)
+	}
+
 	// Headers
 	if strings.HasPrefix(trimmed, "#### ") {
 		content := strings.TrimPrefix(trimmed, "#### ")
@@ -332,6 +337,36 @@ func processSingleLine(line string) string {
 
 	// Regular paragraphs
 	return fmt.Sprintf("<p>%s</p>", processInlineElements(trimmed))
+}
+
+func processBlockQuote(line string) string {
+	content := strings.TrimSpace(strings.TrimPrefix(line, ">"))
+	label, rest, isCallout := splitBlockQuoteCallout(content)
+	if !isCallout {
+		return fmt.Sprintf("<blockquote>%s</blockquote>", processInlineElements(content))
+	}
+
+	processedLabel := processInlineElements(label)
+	processedRest := processInlineElements(strings.TrimSpace(rest))
+	if processedRest == "" {
+		return fmt.Sprintf("<blockquote><strong>%s</strong></blockquote>", processedLabel)
+	}
+
+	return fmt.Sprintf("<blockquote><strong>%s</strong> %s</blockquote>", processedLabel, processedRest)
+}
+
+func splitBlockQuoteCallout(content string) (string, string, bool) {
+	colonIdx := strings.Index(content, ":")
+	if colonIdx < 0 {
+		return "", "", false
+	}
+
+	label := content[:colonIdx+1]
+	if strings.ContainsAny(label[:len(label)-1], ".,;-") {
+		return "", "", false
+	}
+
+	return label, content[colonIdx+1:], true
 }
 
 func processInlineElements(text string) string {
