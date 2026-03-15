@@ -90,6 +90,7 @@ func GenerateHtmlBody(markdown string) string {
 	var result strings.Builder
 
 	lines := strings.Split(markdown, "\n")
+	lines = stripLeadingYamlFrontmatter(lines)
 
 	lineIdx := 0
 	for lineIdx < len(lines) {
@@ -138,6 +139,20 @@ func GenerateHtmlBody(markdown string) string {
 	}
 
 	return result.String()
+}
+
+func stripLeadingYamlFrontmatter(lines []string) []string {
+	if len(lines) < 2 || strings.TrimSpace(lines[0]) != "---" {
+		return lines
+	}
+
+	for lineIdx := 1; lineIdx < len(lines); lineIdx++ {
+		if strings.TrimSpace(lines[lineIdx]) == "---" {
+			return lines[lineIdx+1:]
+		}
+	}
+
+	return lines
 }
 
 func processCodeBlock(lineIdx int, lines []string, indentation string) (int, string) {

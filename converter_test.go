@@ -733,7 +733,7 @@ func TestYamlFrontmatterConversion(t *testing.T) {
 				"# Lorem impsum",
 			},
 			expected: []string{
-				"<h1>Lorem impsum dolor sit amet.</h1>",
+				"<h1>Lorem impsum</h1>",
 				""},
 		},
 		{
@@ -746,7 +746,20 @@ func TestYamlFrontmatterConversion(t *testing.T) {
 				"---",
 				"Impsum dolor"},
 			expected: []string{
-				"<p>Impsum dolor sit amet.</p>",
+				"<p>Impsum dolor</p>",
+				""},
+		},
+		{
+			name: "03 Mid-document delimiter is preserved",
+			markdown: []string{
+				"Lorem impsum",
+				"---",
+				"Dolor sit amet",
+			},
+			expected: []string{
+				"<p>Lorem impsum</p>",
+				"<p>---</p>",
+				"<p>Dolor sit amet</p>",
 				""},
 		},
 	}
