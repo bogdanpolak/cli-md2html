@@ -900,7 +900,8 @@ Generate HTML page`
 	result, err := ConvertMarkdownToHTML(markdown, template, "")
 
 	td.Cmp(t, err, nil)
-	td.Cmp(t, result, `<html><head><title>Front Matter Title</title><meta name="description" content="A document description"></head><body><span class="date">2026-03-13</span><span class="author">Bogdan Polak</span><span class="language">pl</span><img src="cover.png" alt="Cover caption"><footer></footer><article><h1>Hello World</h1>
+	td.Cmp(t, result, `<html><head><title>Front Matter Title</title><meta name="description" content="A document description"></head><body><span class="date">2026-03-13</span><span class="author">Bogdan Polak</span><span class="language">pl</span><img src="cover.png" alt="Cover caption"><footer></footer><article>
+<h1>Hello World</h1>
 
 <p>Generate HTML page</p>
 </article></body></html>`)
@@ -940,8 +941,8 @@ func TestConvertWithTemplateTitlePrecedence(t *testing.T) {
 			td.Cmp(t, err, nil)
 			td.Cmp(t, result, td.All(
 				td.Contains("<title>"+tt.expectedTitle+"</title>"),
-					td.Contains("<article>"),
-					td.Contains("<h1>Hello</h1>"),
+				td.Contains("<article>"),
+				td.Contains("<h1>Hello</h1>"),
 				td.Not(td.Contains("---")),
 			))
 		})

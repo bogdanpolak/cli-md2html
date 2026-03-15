@@ -8,8 +8,11 @@ import (
 	"text/template"
 )
 
+const defaultDocumentTitle = "Converted Document"
+
 // ConvertMarkdownToHTML converts markdown to HTML using a template file
 func ConvertMarkdownToHTML(markdown string, templateText string, title string) (string, error) {
+	bodyMarkdown, data := parseLeadingYamlFrontMatter(markdown)
 
 	// Parse template
 	template, err := template.New("document").Parse(templateText)
@@ -18,19 +21,14 @@ func ConvertMarkdownToHTML(markdown string, templateText string, title string) (
 	}
 
 	// Convert markdown to HTML content (without the full HTML structure)
-	htmlContent := GenerateHtmlBody(markdown)
+	htmlContent := generateHtmlBodyFromMarkdown(bodyMarkdown)
 
-	// Use default title if no title provided
-	if title == "" {
-		title = "Converted Document"
-	}
+	resolveTemplateTitle(&data, title)
 
 	// Execute template
 	var buf bytes.Buffer
-	err = template.Execute(&buf, TemplateData{
-		Title:   title,
-		Content: htmlContent,
-	})
+	data.Content = htmlContent
+	err = template.Execute(&buf, data)
 	if err != nil {
 		return "", fmt.Errorf("error executing template: %w", err)
 	}
@@ -39,8 +37,15 @@ func ConvertMarkdownToHTML(markdown string, templateText string, title string) (
 }
 
 type TemplateData struct {
-	Title   string
-	Content string
+	Title             string
+	Description       string
+	Date              string
+	Author            string
+	Language          string
+	CoverImage        string
+	CoverImageCaption string
+	PageFooter        string
+	Content           string
 }
 
 // Level information for the two-pass list processing
@@ -87,10 +92,14 @@ func createIndentation(steps int) string {
 
 // converts markdown to HTML content (main converter function)
 func GenerateHtmlBody(markdown string) string {
+	bodyMarkdown, _ := parseLeadingYamlFrontMatter(markdown)
+	return generateHtmlBodyFromMarkdown(bodyMarkdown)
+}
+
+func generateHtmlBodyFromMarkdown(markdown string) string {
 	var result strings.Builder
 
 	lines := strings.Split(markdown, "\n")
-	lines = stripLeadingYamlFrontmatter(lines)
 
 	lineIdx := 0
 	for lineIdx < len(lines) {
@@ -141,17 +150,19 @@ func GenerateHtmlBody(markdown string) string {
 	return result.String()
 }
 
-func stripLeadingYamlFrontmatter(lines []string) []string {
+func parseLeadingYamlFrontMatter(markdown string) (string, TemplateData) {
+	lines := strings.Split(markdown, "\n")
 	if len(lines) < 2 || strings.TrimSpace(lines[0]) != "---" {
-		return lines
+		return markdown, TemplateData{}
 	}
 
 	closingIdx := findYamlFrontmatterClosingLine(lines)
 	if closingIdx < 0 {
-		return lines
+		return markdown, TemplateData{}
 	}
 
-	return lines[closingIdx+1:]
+	metadata := extractTemplateDataFromFrontMatter(lines[1:closingIdx])
+	return strings.Join(lines[closingIdx+1:], "\n"), metadata
 }
 
 func findYamlFrontmatterClosingLine(lines []string) int {
@@ -162,6 +173,75 @@ func findYamlFrontmatterClosingLine(lines []string) int {
 	}
 
 	return -1
+}
+
+func extractTemplateDataFromFrontMatter(lines []string) TemplateData {
+	data := TemplateData{}
+
+	for _, line := range lines {
+		key, value, ok := parseFrontMatterLine(line)
+		if !ok {
+			continue
+		}
+
+		setTemplateDataField(&data, key, value)
+	}
+
+	return data
+}
+
+func parseFrontMatterLine(line string) (string, string, bool) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+		return "", "", false
+	}
+
+	key, value, ok := strings.Cut(trimmed, ":")
+	if !ok {
+		return "", "", false
+	}
+
+	key = strings.TrimSpace(key)
+	value = strings.TrimSpace(value)
+	value = strings.Trim(value, `"'`)
+
+	if key == "" {
+		return "", "", false
+	}
+
+	return key, value, true
+}
+
+func resolveTemplateTitle(data *TemplateData, title string) {
+	if title != "" {
+		data.Title = title
+		return
+	}
+
+	if data.Title == "" {
+		data.Title = defaultDocumentTitle
+	}
+}
+
+func setTemplateDataField(data *TemplateData, key, value string) {
+	switch key {
+	case "title":
+		data.Title = value
+	case "description":
+		data.Description = value
+	case "date":
+		data.Date = value
+	case "author":
+		data.Author = value
+	case "language":
+		data.Language = value
+	case "coverImage":
+		data.CoverImage = value
+	case "coverImageCaption":
+		data.CoverImageCaption = value
+	case "pageFooter":
+		data.PageFooter = value
+	}
 }
 
 func processCodeBlock(lineIdx int, lines []string, indentation string) (int, string) {
