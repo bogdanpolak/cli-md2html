@@ -1,3 +1,8 @@
+---
+date: 2026-03-15T12:15:00
+status: "completed"
+title: "YAML Frontmatter Skipping"
+---
 # Task 002: Implement YAML Frontmatter Skipping
 
 ## Goal

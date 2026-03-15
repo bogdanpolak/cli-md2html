@@ -1,3 +1,9 @@
+---
+date: 2026-03-15T15:30:00
+status: "completed"
+title: "Support Language-Qualified Fenced Code Blocks"
+---
+
 # Task 003: Support Language-Qualified Fenced Code Blocks
 
 ## Goal
