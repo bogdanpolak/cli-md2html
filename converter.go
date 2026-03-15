@@ -9,6 +9,7 @@ import (
 )
 
 const defaultDocumentTitle = "Converted Document"
+const yamlFrontMatterDelimiter = "---"
 
 // ConvertMarkdownToHTML converts markdown to HTML using a template file
 func ConvertMarkdownToHTML(markdown string, templateText string, title string) (string, error) {
@@ -152,7 +153,7 @@ func generateHtmlBodyFromMarkdown(markdown string) string {
 
 func parseLeadingYamlFrontMatter(markdown string) (string, TemplateData) {
 	lines := strings.Split(markdown, "\n")
-	if len(lines) < 2 || strings.TrimSpace(lines[0]) != "---" {
+	if len(lines) < 2 || strings.TrimSpace(lines[0]) != yamlFrontMatterDelimiter {
 		return markdown, TemplateData{}
 	}
 
@@ -167,7 +168,7 @@ func parseLeadingYamlFrontMatter(markdown string) (string, TemplateData) {
 
 func findYamlFrontmatterClosingLine(lines []string) int {
 	for lineIdx := 1; lineIdx < len(lines); lineIdx++ {
-		if strings.TrimSpace(lines[lineIdx]) == "---" {
+		if strings.TrimSpace(lines[lineIdx]) == yamlFrontMatterDelimiter {
 			return lineIdx
 		}
 	}
