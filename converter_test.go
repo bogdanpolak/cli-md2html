@@ -881,6 +881,73 @@ func TestConvertWithTemplate(t *testing.T) {
 	td.Cmp(t, result, expected)
 }
 
+func TestConvertWithTemplateUsesFrontMatterMetadata(t *testing.T) {
+	markdown := `---
+title: "Front Matter Title"
+description: "A document description"
+date: 2026-03-13
+author: "Bogdan Polak"
+language: pl
+coverImage: "cover.png"
+coverImageCaption: "Cover caption"
+---
+
+# Hello World
+
+Generate HTML page`
+	template := `<html><head><title>{{ .Title }}</title><meta name="description" content="{{ .Description }}"></head><body><span class="date">{{ .Date }}</span><span class="author">{{ .Author }}</span><span class="language">{{ .Language }}</span><img src="{{ .CoverImage }}" alt="{{ .CoverImageCaption }}"><footer>{{ .PageFooter }}</footer><article>{{ .Content }}</article></body></html>`
+
+	result, err := ConvertMarkdownToHTML(markdown, template, "")
+
+	td.Cmp(t, err, nil)
+	td.Cmp(t, result, `<html><head><title>Front Matter Title</title><meta name="description" content="A document description"></head><body><span class="date">2026-03-13</span><span class="author">Bogdan Polak</span><span class="language">pl</span><img src="cover.png" alt="Cover caption"><footer></footer><article><h1>Hello World</h1>
+
+<p>Generate HTML page</p>
+</article></body></html>`)
+}
+
+func TestConvertWithTemplateTitlePrecedence(t *testing.T) {
+	tests := []struct {
+		name          string
+		title         string
+		markdown      string
+		expectedTitle string
+	}{
+		{
+			name:          "cli title overrides front matter title",
+			title:         "CLI Title",
+			markdown:      "---\ntitle: \"Front Matter Title\"\n---\n\n# Hello",
+			expectedTitle: "CLI Title",
+		},
+		{
+			name:          "front matter title is used when cli title is empty",
+			title:         "",
+			markdown:      "---\ntitle: \"Front Matter Title\"\n---\n\n# Hello",
+			expectedTitle: "Front Matter Title",
+		},
+		{
+			name:          "default title is used when cli title and front matter title are empty",
+			title:         "",
+			markdown:      "# Hello",
+			expectedTitle: "Converted Document",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ConvertMarkdownToHTML(tt.markdown, "<title>{{ .Title }}</title><article>{{ .Content }}</article>", tt.title)
+
+			td.Cmp(t, err, nil)
+			td.Cmp(t, result, td.All(
+				td.Contains("<title>"+tt.expectedTitle+"</title>"),
+					td.Contains("<article>"),
+					td.Contains("<h1>Hello</h1>"),
+				td.Not(td.Contains("---")),
+			))
+		})
+	}
+}
+
 func TestComplexDocument(t *testing.T) {
 	markdown := `# Main Title
 

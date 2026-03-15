@@ -103,6 +103,11 @@ func (c *Context) GivenIHaveAMarkdownFileWithContent(filename, content string) e
 	return nil
 }
 
+func (c *Context) GivenIHaveAMarkdownFileWithContentDocString(filename string, content *godog.DocString) error {
+	c.Files[filename] = content.Content
+	return nil
+}
+
 func (c *Context) GivenIHaveMarkdownContentString(content string) error {
 	c.StdinContent = content
 	return nil
@@ -340,6 +345,7 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 
 	// Register CLI testing steps
 	ctx.Given(`^I have a markdown file "([^"]*)" with content "([^"]*)"$`, scenarioContext.GivenIHaveAMarkdownFileWithContent)
+	ctx.Given(`^I have a markdown file "([^"]*)" with content:$`, scenarioContext.GivenIHaveAMarkdownFileWithContentDocString)
 	ctx.Given(`^I have markdown content "([^"]*)"$`, scenarioContext.GivenIHaveMarkdownContentString)
 	ctx.Given(`^I have a template file "([^"]*)" with content:$`, scenarioContext.GivenIHaveATemplateFileWithContent)
 	ctx.When(`^I run the command "([^"]*)"$`, scenarioContext.WhenIRunTheCommand)

@@ -52,3 +52,34 @@ Feature: CLI Interface
     When I run the command "md2html -input valid.md -template invalid-template.html"
     Then I should get an error message about template parsing
     And the command should exit with code 1
+
+  Scenario: CLI 009 Render front matter metadata in template
+    Given I have a markdown file "post.md" with content:
+      """
+      ---
+      title: "Front Matter Title"
+      description: "A document description"
+      date: 2026-03-13
+      author: "Bogdan Polak"
+      language: pl
+      coverImage: "cover.png"
+      coverImageCaption: "Cover caption"
+      ---
+
+      # Hello World
+
+      Generate HTML page
+      """
+    And I have a template file "template.html" with content:
+      """
+      <html><head><title>{{.Title}}</title><meta name="description" content="{{.Description}}"></head><body><span>{{.Date}}</span><span>{{.Author}}</span><span>{{.Language}}</span><img src="{{.CoverImage}}" alt="{{.CoverImageCaption}}"><footer>{{.PageFooter}}</footer><article>{{.Content}}</article></body></html>
+      """
+    When I run the command "md2html -input post.md -template template.html"
+    Then the HTML output should contain "<title>Front Matter Title</title>"
+    And the HTML output should contain "content=\"A document description\""
+    And the HTML output should contain "<span>2026-03-13</span>"
+    And the HTML output should contain "<span>Bogdan Polak</span>"
+    And the HTML output should contain "<span>pl</span>"
+    And the HTML output should contain "<img src=\"cover.png\" alt=\"Cover caption\">"
+    And the HTML output should contain "<footer></footer>"
+    And the HTML output should contain "<h1>Hello World</h1>"
