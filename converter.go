@@ -62,6 +62,10 @@ func isListLine(ln string) bool {
 	return matched
 }
 
+func isBlockQuoteLine(ln string) bool {
+	return strings.HasPrefix(strings.TrimSpace(ln), ">")
+}
+
 func isInsideListBlock(ln string, insideCodeBlock *bool) bool {
 	trimmed := strings.TrimSpace(ln)
 	if isCodeLine(trimmed) {
@@ -313,7 +317,7 @@ func processSingleLine(line string) string {
 	}
 
 	// Block quotes
-	if strings.HasPrefix(trimmed, ">") {
+	if isBlockQuoteLine(trimmed) {
 		return processBlockQuote(trimmed)
 	}
 
@@ -356,17 +360,26 @@ func processBlockQuote(line string) string {
 }
 
 func splitBlockQuoteCallout(content string) (string, string, bool) {
-	colonIdx := strings.Index(content, ":")
+	colonIdx := findBlockQuoteCalloutBoundary(content)
 	if colonIdx < 0 {
 		return "", "", false
 	}
 
 	label := content[:colonIdx+1]
-	if strings.ContainsAny(label[:len(label)-1], ".,;-") {
-		return "", "", false
+	return label, content[colonIdx+1:], true
+}
+
+func findBlockQuoteCalloutBoundary(content string) int {
+	colonIdx := strings.Index(content, ":")
+	if colonIdx < 0 {
+		return -1
 	}
 
-	return label, content[colonIdx+1:], true
+	if strings.ContainsAny(content[:colonIdx], ".,;-") {
+		return -1
+	}
+
+	return colonIdx
 }
 
 func processInlineElements(text string) string {
