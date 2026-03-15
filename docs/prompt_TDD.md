@@ -1,6 +1,11 @@
 Tasks:
+{provide a list of tasks to implement, for example: task_001_block_quote_support.md}
 
 Your job is to implement selected tasks, execute sequentially, for each task:
+- clarify if needed
+- plan implementation
+- write tests and run for the requirements (RED phase)
+- git commit, message format `RED: {title of the task}` - for example `RED: Block quote support`
 - implement requirements using TDD approach
 - run tests
 - validate cli tool using #file:001-post-pl.md (it has both cases)
