@@ -217,18 +217,14 @@ article.content li {
   color: var(--ink);
 }
 
-article.content .callout {
+article.content > blockquote {
   font-size: var(--base-font-size);
   line-height: var(--line-height-md);
   padding: 1.5rem;
-  margin-bottom: 1.4rem;
+  margin: 1.4rem 0;
   border-radius: var(--radius-md);
   background: var(--surface-strong);
   border: 1px solid rgba(85, 66, 44, 0.12);
-}
-
-article.content p {
-  margin: 0 0 1.2rem;
 }
 
 article.content strong {
@@ -263,12 +259,14 @@ article.content li + li {
   margin-top: 0.35rem;
 }
 
-article.content ol.larger li {
+article.content ol.larger > li {
   font-family: var(--display);
   font-weight: 700;
   font-size: 1.6rem;
 } 
-article.content ol.larger li p {
+article.content ol.larger > li > ul {
+  list-style-type: none;
+  margin: 0;
   font-weight: 100;
   font-family: var(--body);
   font-size: var(--base-font-size);
