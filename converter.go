@@ -49,7 +49,7 @@ type ListLevel struct {
 	ListType string // "ul" or "ol"
 }
 
-func isCodeLine(ln string) bool {
+func isCodeFenceLine(ln string) bool {
 	trimmed := strings.TrimSpace(ln)
 	return strings.HasPrefix(trimmed, "```")
 }
@@ -68,7 +68,7 @@ func isBlockQuoteLine(ln string) bool {
 
 func isInsideListBlock(ln string, insideCodeBlock *bool) bool {
 	trimmed := strings.TrimSpace(ln)
-	if isCodeLine(trimmed) {
+	if isCodeFenceLine(trimmed) {
 		*insideCodeBlock = !*insideCodeBlock
 		return true
 	}
@@ -97,7 +97,7 @@ func GenerateHtmlBody(markdown string) string {
 		currentLine := lines[lineIdx]
 
 		// Handle multiline code blocks (```)
-		if isCodeLine(currentLine) {
+		if isCodeFenceLine(currentLine) {
 			newIdx, codeBlock := processCodeBlock(lineIdx, lines, "")
 			result.WriteString(codeBlock)
 			lineIdx = newIdx
@@ -170,7 +170,7 @@ func processCodeBlock(lineIdx int, lines []string, indentation string) (int, str
 	depth := getLineDepth(ln)
 	lineIdx++
 	startIdx := lineIdx
-	for lineIdx < len(lines) && !isCodeLine(lines[lineIdx]) {
+	for lineIdx < len(lines) && !isCodeFenceLine(lines[lineIdx]) {
 		lineIdx++
 	}
 	if startIdx < lineIdx {
@@ -267,7 +267,7 @@ func processListBlock(lines []string) string {
 			// skip empty lines
 			line := lines[lineIdx]
 			isNextListLine := isListLine(strings.TrimSpace(line))
-			nextIsCode = isCodeLine(line)
+			nextIsCode = isCodeFenceLine(line)
 			nextDepth = getLineDepth(line)
 			if nextIsCode || !isNextListLine {
 				nextDepth = currentDepth
