@@ -51,7 +51,7 @@ type ListLevel struct {
 
 func isCodeLine(ln string) bool {
 	trimmed := strings.TrimSpace(ln)
-	return trimmed == "```"
+	return strings.HasPrefix(trimmed, "```")
 }
 
 func isListLine(ln string) bool {
