@@ -128,6 +128,51 @@ func TestHeaderConversion(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Block Quote conversions
+// ---------------------------------------------------------------------------
+
+func TestBlockQuoteConversion(t *testing.T) {
+	tests := []simpleTestCase{
+		{
+			name:     "01 Basic Block Quote",
+			markdown: "> Lorem impsum dolor sit amet.",
+			expected: "<blockquote>Lorem impsum dolor sit amet.</blockquote>\n",
+		},
+		{
+			name:     "02 Block Quote with Callout",
+			markdown: "> Rule of thumb: Lorem impsum dolor sit amet.",
+			expected: "<blockquote><strong>Rule of thumb:</strong> Lorem impsum dolor sit amet.</blockquote>\n",
+		},
+		{
+			name:     "03 Callout ignored after comma",
+			markdown: "> Rule of thumb, actually: Lorem impsum dolor sit amet.",
+			expected: "<blockquote>Rule of thumb, actually: Lorem impsum dolor sit amet.</blockquote>\n",
+		},
+		{
+			name:     "04 Callout ignored after period",
+			markdown: "> Rule of thumb. Actually: Lorem impsum dolor sit amet.",
+			expected: "<blockquote>Rule of thumb. Actually: Lorem impsum dolor sit amet.</blockquote>\n",
+		},
+		{
+			name:     "05 Callout ignored after semicolon",
+			markdown: "> Rule of thumb; actually: Lorem impsum dolor sit amet.",
+			expected: "<blockquote>Rule of thumb; actually: Lorem impsum dolor sit amet.</blockquote>\n",
+		},
+		{
+			name:     "06 Callout ignored after hyphen",
+			markdown: "> Rule of thumb - actually: Lorem impsum dolor sit amet.",
+			expected: "<blockquote>Rule of thumb - actually: Lorem impsum dolor sit amet.</blockquote>\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td.Cmp(t, GenerateHtmlBody(tt.markdown), tt.expected)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Inline code
 // ---------------------------------------------------------------------------
 
@@ -657,6 +702,46 @@ func TestListWithCodeBlockConversion(t *testing.T) {
 				"•</li>",
 				"•<li>Two</li>",
 				"</ul>",
+				""},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expected, markdown := tt.toString(indentHtmlWith4Spaces)
+			td.Cmp(t, GenerateHtmlBody(markdown), expected)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Block Quote conversions
+// ---------------------------------------------------------------------------
+
+func TestYamlFrontmatterConversion(t *testing.T) {
+	tests := []multilineTestCase{
+		{
+			name: "01 Empty Yaml Frontmatter",
+			markdown: []string{
+				"---",
+				"---",
+				"# Lorem impsum",
+			},
+			expected: []string{
+				"<h1>Lorem impsum dolor sit amet.</h1>",
+				""},
+		},
+		{
+			name: "02 Sample Yaml Frontmatter",
+			markdown: []string{
+				"---",
+				"postId: \"class-helpers-intro\"",
+				"language: pl",
+				"date: 2026-03-13",
+				"---",
+				"Impsum dolor"},
+			expected: []string{
+				"<p>Impsum dolor sit amet.</p>",
 				""},
 		},
 	}
