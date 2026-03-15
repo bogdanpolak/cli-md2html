@@ -1,6 +1,6 @@
 ---
 date: 2026-03-15T16:00:00
-status: "pending"
+status: "completed"
 title: "Front Matter Metadata Support"
 ---
 # Task 004: Front Matter Metadata Support
