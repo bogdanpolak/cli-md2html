@@ -1,15 +1,13 @@
 Tasks:
-#file:task_001_block_quote.md
-#file:task_002_yaml_frontmatter.md
 
 Your job is to implement selected tasks, execute sequentially, for each task:
 - implement requirements using TDD approach
 - run tests
 - validate cli tool using #file:001-post-pl.md (it has both cases)
 - in that phase reduce code refactorings to required only changes, next phase `REFACTOR` is dedicated for that
-- git commit, message format `GREEN: new functionality`
+- git commit, message format `GREEN: {title of the task}` - for example `GREEN: Block quote support`
 - Review all refactorings and apply at least one - in TDD style (it can be main logic or tests)
-- git commit, message format `REFACTOR: new functionality`
+- git commit, message format `REFACTOR: {title of the refactoring}` - for example `REFACTOR: Simplify block quote tests`
 
 # Working Rules
 
