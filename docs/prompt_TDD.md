@@ -1,0 +1,20 @@
+Tasks:
+#file:task_001_block_quote.md
+#file:task_002_yaml_frontmatter.md
+
+Your job is to implement selected tasks, execute sequentially, for each task:
+- implement requirements using TDD approach
+- run tests
+- validate cli tool using #file:001-post-pl.md (it has both cases)
+- in that phase reduce code refactorings to required only changes, next phase `REFACTOR` is dedicated for that
+- git commit, message format `GREEN: new functionality`
+- Review all refactorings and apply at least one - in TDD style (it can be main logic or tests)
+- git commit, message format `REFACTOR: new functionality`
+
+# Working Rules
+
+- ask any clarifying question before start
+- use subagents to save context window
+- when a subagent is used, show one short status line: `[SubagentName] <current activity>`
+- maximize token efficiency. Prefer terse bullets, no repeated plans, no long code excerpts unless required
+- report only blockers, key decisions, and final results
