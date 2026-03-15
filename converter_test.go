@@ -762,6 +762,19 @@ func TestYamlFrontmatterConversion(t *testing.T) {
 				"<p>Dolor sit amet</p>",
 				""},
 		},
+		{
+			name: "04 Unterminated leading delimiter is preserved",
+			markdown: []string{
+				"---",
+				"postId: \"class-helpers-intro\"",
+				"Impsum dolor",
+			},
+			expected: []string{
+				"<p>---</p>",
+				"<p>postId: &quot;class-helpers-intro&quot;</p>",
+				"<p>Impsum dolor</p>",
+				""},
+		},
 	}
 
 	for _, tt := range tests {

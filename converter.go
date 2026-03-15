@@ -146,13 +146,22 @@ func stripLeadingYamlFrontmatter(lines []string) []string {
 		return lines
 	}
 
+	closingIdx := findYamlFrontmatterClosingLine(lines)
+	if closingIdx < 0 {
+		return lines
+	}
+
+	return lines[closingIdx+1:]
+}
+
+func findYamlFrontmatterClosingLine(lines []string) int {
 	for lineIdx := 1; lineIdx < len(lines); lineIdx++ {
 		if strings.TrimSpace(lines[lineIdx]) == "---" {
-			return lines[lineIdx+1:]
+			return lineIdx
 		}
 	}
 
-	return lines
+	return -1
 }
 
 func processCodeBlock(lineIdx int, lines []string, indentation string) (int, string) {
