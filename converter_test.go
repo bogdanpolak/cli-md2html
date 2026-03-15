@@ -627,6 +627,27 @@ func TestCodeBlockConversion(t *testing.T) {
 				"</section>",
 				""},
 		},
+		{
+			name: "07 Language-qualified code block keeps following prose outside",
+			markdown: []string{
+				"```pascal",
+				"function Test: Integer;",
+				"begin",
+				"  Result := 42;",
+				"end;",
+				"```",
+				"Following paragraph.",
+			},
+			expected: []string{
+				"<section class=\"code\">",
+				"<pre><code>function Test: Integer;",
+				"begin",
+				"  Result := 42;",
+				"end;</code></pre>",
+				"</section>",
+				"<p>Following paragraph.</p>",
+				""},
+		},
 	}
 
 	for _, tt := range tests {
@@ -707,6 +728,26 @@ func TestListWithCodeBlockConversion(t *testing.T) {
 				"•</li>",
 				"•<li>Two</li>",
 				"</ul>",
+				""},
+		},
+		{
+			name: "04 Ordered list with language-qualified code block",
+			markdown: []string{
+				"1. First step",
+				"   ```pascal",
+				"   WriteLn('Hello');",
+				"   ```",
+				"2. Second step",
+			},
+			expected: []string{
+				"<ol>",
+				"•<li>First step",
+				"••<section class=\"code\">",
+				"••<pre><code>WriteLn(&#39;Hello&#39;);</code></pre>",
+				"••</section>",
+				"•</li>",
+				"•<li>Second step</li>",
+				"</ol>",
 				""},
 		},
 	}
