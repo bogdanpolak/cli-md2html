@@ -1,6 +1,7 @@
 ---
 date: 2026-03-15T12:00:00
 status: "completed"
+type: "feature"
 title: "Implement Block Quote Support"
 ---
 # Task 001: Implement Block Quote Support
