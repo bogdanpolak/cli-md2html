@@ -249,20 +249,21 @@ func processCodeBlock(lineIdx int, lines []string, indentation string) (int, str
 	var codeBlock strings.Builder
 	ln := lines[lineIdx]
 	depth := getLineDepth(ln)
+
 	lineIdx++
 	startIdx := lineIdx
 	for lineIdx < len(lines) && !isCodeFenceLine(lines[lineIdx]) {
 		lineIdx++
 	}
 	if startIdx < lineIdx {
-		codeBlock.WriteString(indentation + "<section class=\"code\">\n" + indentation + "<pre><code>")
+		codeBlock.WriteString(indentation + "<div class=\"code\">\n" + indentation + "<pre><code>")
 		for idx := startIdx; idx < lineIdx; idx++ {
 			codeBlock.WriteString(escapeHTML(lines[idx][depth:]))
 			if idx < lineIdx-1 {
 				codeBlock.WriteString("\n")
 			}
 		}
-		codeBlock.WriteString("</code></pre>\n" + indentation + "</section>\n")
+		codeBlock.WriteString("</code></pre>\n" + indentation + "</div>\n")
 	}
 
 	lineIdx++ // Skip closing ```

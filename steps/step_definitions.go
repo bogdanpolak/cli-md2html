@@ -48,6 +48,11 @@ func assertTextContains(actual, expected string) error {
 	return nil
 }
 
+func normalizeStepText(text string) string {
+	replacer := strings.NewReplacer(`\"`, `"`, `\\`, `\`)
+	return replacer.Replace(text)
+}
+
 // Step Implementations
 
 func (c *Context) GivenIHaveATemplateContent(templateDoc *godog.DocString) error {
@@ -93,7 +98,7 @@ func (c *Context) ThenIShouldGetHtmlContent(htmlDoc *godog.DocString) error {
 }
 
 func (c *Context) ThenIShouldGetHtmlContaining(expected string) error {
-	return assertTextContains(c.ResultHTML, expected)
+	return assertTextContains(c.ResultHTML, normalizeStepText(expected))
 }
 
 // CLI Testing Step Implementations
@@ -218,6 +223,8 @@ func (c *Context) ThenAFileShouldBeCreated(filename string) error {
 }
 
 func (c *Context) ThenTheFileShouldContain(expectedContent string) error {
+	expectedContent = normalizeStepText(expectedContent)
+
 	filename := c.LastFile
 	if filename == "" {
 		return fmt.Errorf("no file was previously checked for creation")
@@ -233,6 +240,7 @@ func (c *Context) ThenTheFileShouldContain(expectedContent string) error {
 }
 
 func (c *Context) ThenIShouldGetHtmlOutputContaining(expected string) error {
+	expected = normalizeStepText(expected)
 	if !strings.Contains(c.CommandOutput, expected) {
 		return fmt.Errorf("expected output to contain '%s', but got: %s", expected, c.CommandOutput)
 	}
@@ -249,6 +257,7 @@ func (c *Context) ThenTheHtmlOutputShouldContain(expected string) error {
 }
 
 func (c *Context) ThenIShouldSeeHelpTextContaining(expected string) error {
+	expected = normalizeStepText(expected)
 	output := c.CommandOutput + c.CommandError
 	if !strings.Contains(output, expected) {
 		return fmt.Errorf("expected help text to contain '%s', but got: %s", expected, output)
@@ -348,14 +357,14 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.Given(`^I have a markdown file "([^"]*)" with content:$`, scenarioContext.GivenIHaveAMarkdownFileWithContentDocString)
 	ctx.Given(`^I have markdown content "([^"]*)"$`, scenarioContext.GivenIHaveMarkdownContentString)
 	ctx.Given(`^I have a template file "([^"]*)" with content:$`, scenarioContext.GivenIHaveATemplateFileWithContent)
-	ctx.When(`^I run the command "([^"]*)"$`, scenarioContext.WhenIRunTheCommand)
+	ctx.When(`^I run the command "(.*)"$`, scenarioContext.WhenIRunTheCommand)
 	ctx.When(`^I pipe the content to md2html$`, scenarioContext.WhenIPipeTheContentToMd2html)
 	ctx.Then(`^a file "([^"]*)" should be created$`, scenarioContext.ThenAFileShouldBeCreated)
-	ctx.Then(`^the file should contain "([^"]*)"$`, scenarioContext.ThenTheFileShouldContain)
-	ctx.Then(`^I should get HTML output containing "([^"]*)"$`, scenarioContext.ThenIShouldGetHtmlOutputContaining)
+	ctx.Then(`^the file should contain "(.*)"$`, scenarioContext.ThenTheFileShouldContain)
+	ctx.Then(`^I should get HTML output containing "(.*)"$`, scenarioContext.ThenIShouldGetHtmlOutputContaining)
 	ctx.Then(`^the HTML output should contain a title "([^"]*)"$`, scenarioContext.ThenTheHtmlOutputShouldContainATitle)
-	ctx.Then(`^the HTML output should contain "([^"]*)"$`, scenarioContext.ThenTheHtmlOutputShouldContain)
-	ctx.Then(`^I should see help text containing "([^"]*)"$`, scenarioContext.ThenIShouldSeeHelpTextContaining)
+	ctx.Then(`^the HTML output should contain "(.*)"$`, scenarioContext.ThenTheHtmlOutputShouldContain)
+	ctx.Then(`^I should see help text containing "(.*)"$`, scenarioContext.ThenIShouldSeeHelpTextContaining)
 	ctx.Then(`^I should get an error message$`, scenarioContext.ThenIShouldGetAnErrorMessage)
 	ctx.Then(`^the command should exit with code 1$`, scenarioContext.ThenTheCommandShouldExitWithCode1)
 	ctx.Then(`^I should get an error message about template parsing$`, scenarioContext.ThenIShouldGetAnErrorMessageAboutTemplateParsing)

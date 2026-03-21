@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os/exec"
 	"testing"
 
 	"github.com/bogdanpolak/cli-md2html/steps"
@@ -27,7 +28,18 @@ func Test_BDD_TemplateProcessing(t *testing.T) {
 	}
 }
 
+func buildCliBinary(t *testing.T) {
+	t.Helper()
+
+	cmd := exec.Command("go", "build", "-o", "bin/md2html", ".")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("failed to build md2html test binary: %v\n%s", err, output)
+	}
+}
+
 func Test_BDD_CommandLine(t *testing.T) {
+	buildCliBinary(t)
+
 	suite := godog.TestSuite{
 		ScenarioInitializer: steps.InitializeScenario,
 		Options: &godog.Options{
