@@ -10,6 +10,7 @@ A lightweight Go CLI tool that converts Markdown documents to simple HTML withou
 - ✅ **Ordered lists** (`1.` → `<ol><li>`)
 - ✅ **Unordered lists** (`-` → `<ul><li>`)
 - ✅ **Links** (`[text](url)` and auto-detect URLs → `<a href="">`)
+- ✅ **Images** (`![alt](src)` → `<img>`, `figure:` alt text → `<figure>`, raw HTML `<img>` passthrough)
 - ✅ **Paragraphs** (regular text → `<p>`)
 - ✅ **List grouping** (consecutive list items are grouped properly)
 
@@ -107,7 +108,6 @@ The template uses Go's standard `text/template` package, so you can use any Go t
 
 This is a simple converter focused on basic Markdown elements. It does not support:
 - Tables
-- Images
 - Complex nested lists
 - Bold/italic formatting
 - Blockquotes
