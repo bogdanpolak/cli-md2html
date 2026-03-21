@@ -50,12 +50,19 @@ Use for one or more `docs/task_*.md` files.
    - commit `REFACTOR: {short refactor title}`
 8. Report blockers, key decisions, test results, final result.
 
-## Branches
+## Rules
 
-- task unclear: clarify first
+- IMPORTANT: always create a commit for each phase, even not asked. This is the core of the workflow.
+- task unclear: clarify first, use tool `askQuestions`
 - task vs tests conflict: task doc wins unless clearly wrong
 - suite large: start narrow, widen after GREEN
 - unrelated issue: ignore unless blocking
+- use subagents if they save context
+- if using subagent, print one line: `[SubagentName] <current activity>`
+- be terse
+- no repeated plans
+- no long code excerpts unless needed
+- report blockers, key decisions, final results
 
 ## Done When
 
@@ -65,16 +72,3 @@ Use for one or more `docs/task_*.md` files.
 - relevant tests pass
 - CLI checked when applicable
 - no unrelated cleanup mixed in
-
-## Rules
-
-- use subagents if they save context
-- if using subagent, print one line: `[SubagentName] <current activity>`
-- be terse
-- no repeated plans
-- no long code excerpts unless needed
-- report blockers, key decisions, final results
-
-## Example
-
-Implement `docs/task_003_language_fenced_code_blocks.md` with this skill.
