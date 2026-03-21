@@ -258,6 +258,36 @@ func TestLinkConversion(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Images
+// ---------------------------------------------------------------------------
+
+func TestMarkdownImageConversion(t *testing.T) {
+	tests := []simpleTestCase{
+		{
+			name:     "01 Standard markdown image renders as img tag without paragraph",
+			markdown: "![Tux, the Linux mascot](/assets/images/tux.png)",
+			expected: "<img src=\"/assets/images/tux.png\" alt=\"Tux, the Linux mascot\">\n",
+		},
+		{
+			name:     "02 Figure-prefixed alt text renders figure with figcaption",
+			markdown: "![figure: Linux mascot known as tux](/imgs/tux.png)",
+			expected: "<figure>\n  <img src=\"/imgs/tux.png\" alt=\"Linux mascot known as tux\">\n  <figcaption>Linux mascot known as tux</figcaption>\n</figure>\n",
+		},
+		{
+			name:     "03 Raw html image passes through unchanged",
+			markdown: `<img src="/assets/images/tux.png" alt="Tux, the Linux mascot">`,
+			expected: `<img src="/assets/images/tux.png" alt="Tux, the Linux mascot">` + "\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td.Cmp(t, GenerateHtmlBody(tt.markdown), tt.expected)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Html Escaping
 // ---------------------------------------------------------------------------
 
