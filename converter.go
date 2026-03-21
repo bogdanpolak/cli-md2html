@@ -472,10 +472,14 @@ func renderMarkdownImage(line string) (string, bool) {
 	if caption, ok := strings.CutPrefix(alt, "figure:"); ok {
 		caption = strings.TrimSpace(caption)
 		escapedCaption := escapeHTML(caption)
-		return fmt.Sprintf("<figure>\n  <img src=\"%s\" alt=\"%s\">\n  <figcaption>%s</figcaption>\n</figure>", escapeHTML(src), escapedCaption, escapedCaption), true
+		return fmt.Sprintf("<figure>\n  %s\n  <figcaption>%s</figcaption>\n</figure>", renderHTMLImage(src, caption), escapedCaption), true
 	}
 
-	return fmt.Sprintf("<img src=\"%s\" alt=\"%s\">", escapeHTML(src), escapeHTML(alt)), true
+	return renderHTMLImage(src, alt), true
+}
+
+func renderHTMLImage(src, alt string) string {
+	return fmt.Sprintf("<img src=\"%s\" alt=\"%s\">", escapeHTML(src), escapeHTML(alt))
 }
 
 func processBlockQuote(line string) string {

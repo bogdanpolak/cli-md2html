@@ -1,6 +1,6 @@
 ---
 date: 2026-03-21T00:00:00
-status: "pending"
+status: "completed"
 type: "feature"
 title: "Markdown Images and Figure Rendering"
 ---
