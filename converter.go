@@ -11,6 +11,9 @@ import (
 const defaultDocumentTitle = "Converted Document"
 const yamlFrontMatterDelimiter = "---"
 
+var markdownImagePattern = regexp.MustCompile(`^!\[([^\]]*)\]\(([^)]+)\)$`)
+var rawHTMLImagePattern = regexp.MustCompile(`(?i)^<img\b[^>]*>$`)
+
 // ConvertMarkdownToHTML converts markdown to HTML using a template file
 func ConvertMarkdownToHTML(markdown string, templateText string, title string) (string, error) {
 	bodyMarkdown, data := parseLeadingYamlFrontMatter(markdown)
@@ -422,6 +425,14 @@ func processSingleLine(line string) string {
 		return ""
 	}
 
+	if rawHTMLImagePattern.MatchString(trimmed) {
+		return trimmed
+	}
+
+	if html, ok := renderMarkdownImage(trimmed); ok {
+		return html
+	}
+
 	// Block quotes
 	if isBlockQuoteLine(trimmed) {
 		return processBlockQuote(trimmed)
@@ -447,6 +458,24 @@ func processSingleLine(line string) string {
 
 	// Regular paragraphs
 	return fmt.Sprintf("<p>%s</p>", processInlineElements(trimmed))
+}
+
+func renderMarkdownImage(line string) (string, bool) {
+	matches := markdownImagePattern.FindStringSubmatch(line)
+	if len(matches) != 3 {
+		return "", false
+	}
+
+	alt := matches[1]
+	src := matches[2]
+
+	if caption, ok := strings.CutPrefix(alt, "figure:"); ok {
+		caption = strings.TrimSpace(caption)
+		escapedCaption := escapeHTML(caption)
+		return fmt.Sprintf("<figure>\n  <img src=\"%s\" alt=\"%s\">\n  <figcaption>%s</figcaption>\n</figure>", escapeHTML(src), escapedCaption, escapedCaption), true
+	}
+
+	return fmt.Sprintf("<img src=\"%s\" alt=\"%s\">", escapeHTML(src), escapeHTML(alt)), true
 }
 
 func processBlockQuote(line string) string {
