@@ -780,6 +780,32 @@ func TestListWithCodeBlockConversion(t *testing.T) {
 				"</ol>",
 				""},
 		},
+		{
+			name: "05 Ordered list with language-qualified code block and empty line",
+			markdown: []string{
+				"1. Create game object",
+				"   ```js",
+				"   test(\"createGame returns expected shape\", () => {",
+				"     const game = createGame([\"Luke\", \"Leia\"]);",
+				"",
+				"     expect(game.players).toHaveLength(2);",
+				"   });",
+				"   ```",
+			},
+			expected: []string{
+				"<ol>",
+				"•<li>Create game object",
+				"••<div class=\"code\">",
+				"••<pre><code>test(&quot;createGame returns expected shape&quot;, () =&gt; {",
+				"  const game = createGame([&quot;Luke&quot;, &quot;Leia&quot;]);",
+				"",
+				"  expect(game.players).toHaveLength(2);",
+				"});</code></pre>",
+				"••</div>",
+				"•</li>",
+				"</ol>",
+				""},
+		},
 	}
 
 	for _, tt := range tests {
