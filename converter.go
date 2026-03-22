@@ -261,11 +261,7 @@ func processCodeBlock(lineIdx int, lines []string, indentation string) (int, str
 	if startIdx < lineIdx {
 		codeBlock.WriteString(indentation + "<div class=\"code\">\n" + indentation + "<pre><code>")
 		for idx := startIdx; idx < lineIdx; idx++ {
-			trimmedLine := ""
-			if len(lines[idx]) > depth {
-				trimmedLine = lines[idx][depth:]
-			}
-			codeBlock.WriteString(escapeHTML(trimmedLine))
+			codeBlock.WriteString(escapeHTML(trimCodeLineIndentation(lines[idx], depth)))
 			if idx < lineIdx-1 {
 				codeBlock.WriteString("\n")
 			}
@@ -290,6 +286,14 @@ func getLineDepth(ln string) int {
 		}
 	}
 	return depth
+}
+
+func trimCodeLineIndentation(line string, depth int) string {
+	if len(line) <= depth {
+		return ""
+	}
+
+	return line[depth:]
 }
 
 // Process a block of list lines using the two-pass algorithm
