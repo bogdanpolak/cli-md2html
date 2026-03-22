@@ -261,7 +261,11 @@ func processCodeBlock(lineIdx int, lines []string, indentation string) (int, str
 	if startIdx < lineIdx {
 		codeBlock.WriteString(indentation + "<div class=\"code\">\n" + indentation + "<pre><code>")
 		for idx := startIdx; idx < lineIdx; idx++ {
-			codeBlock.WriteString(escapeHTML(lines[idx][depth:]))
+			trimmedLine := ""
+			if len(lines[idx]) > depth {
+				trimmedLine = lines[idx][depth:]
+			}
+			codeBlock.WriteString(escapeHTML(trimmedLine))
 			if idx < lineIdx-1 {
 				codeBlock.WriteString("\n")
 			}
