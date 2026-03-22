@@ -1,6 +1,6 @@
 ---
 date: 2026-03-22T00:00:00
-status: "pending"
+status: "completed"
 type: "bug"
 title: "Bug: Panic on Empty Lines in List-Nested Fenced Code Blocks"
 ---
