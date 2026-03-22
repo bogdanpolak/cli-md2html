@@ -59,6 +59,15 @@ cat test02.md | ./bin/md2html | tr '\n' '│' | grep "$EXPECTED02" > /dev/null &
 rm test02.md
 
 # ---------------------------------------------------------
-N03="[TEST] article-002.md - bug fix needed"
-EXPECTED03='<html>'
-cat samples/article-002.md | ./bin/md2html | tr '\n' '│' | grep "$EXPECTED03" > /dev/null && echo "✅ OK "$N03 || echo "❌ Failed "$N03
+T03_ID="[TEST 03]"
+T03_NAME="$T03_ID Regression - Panic on empty lines in lists"
+SAMPLE03_MD="./samples/bug007-article.md"
+if (cat "$SAMPLE03_MD" > /dev/null); then
+  cat "$SAMPLE03_MD" | ./bin/md2html | tr '\n' '│' | grep "panic: runtime error: slice bounds out of range" > /dev/null && echo "❌ Failed "$T03_NAME" - panic occurred" || echo "✅ OK "$T03_NAME" - no panic"
+  EXPECTED03_Sample01='│            <li>If available, enable automatic test execution in watch mode.│                <div class="code">│                <pre><code>test(&quot;movePlayer - Obi-Wan passing Start and buys location&quot;, () =&gt; {│    const game = createTestGame();││    movePlayer_new(game);││    assert.equal(money, 1640);│});</code></pre>│                </div>│            </li>│'
+  cat "$SAMPLE03_MD" | ./bin/md2html | tr '\n' '│' | grep "$EXPECTED03_Sample01" > /dev/null && echo "✅ OK "$T03_NAME" - Example 1" || echo "❌ Failed "$T03_NAME" - Example 1"
+  EXPECTED03_Sample02='│    <li>update code:│        <div class="code">│        <pre><code>movePlayer_new(game);││assert.equal(money, 1640);│});</code></pre>│        </div>│    </li>│'
+  cat "$SAMPLE03_MD" | ./bin/md2html | tr '\n' '│' | grep "$EXPECTED03_Sample02" > /dev/null && echo "✅ OK "$T03_NAME" - Example 2" || echo "❌ Failed "$T03_NAME" - Example 2"
+else
+  echo "❌ Failed "$T03_ID" - sample file missing: "$SAMPLE03_MD
+fi 
