@@ -678,7 +678,7 @@ func TestCodeBlockConversion(t *testing.T) {
 				"Following paragraph.",
 			},
 			expected: []string{
-				"<div class=\"code\">",
+				"<div class=\"code\" data-language=\"pascal\">",
 				"<pre><code>function Test: Integer;",
 				"begin",
 				"  Result := 42;",
@@ -781,7 +781,7 @@ func TestListWithCodeBlockConversion(t *testing.T) {
 			expected: []string{
 				"<ol>",
 				"•<li>First step",
-				"••<div class=\"code\">",
+				"••<div class=\"code\" data-language=\"pascal\">",
 				"••<pre><code>WriteLn(&#39;Hello&#39;);</code></pre>",
 				"••</div>",
 				"•</li>",
@@ -804,7 +804,7 @@ func TestListWithCodeBlockConversion(t *testing.T) {
 			expected: []string{
 				"<ol>",
 				"•<li>Create game object",
-				"••<div class=\"code\">",
+				"••<div class=\"code\" data-language=\"js\">",
 				"••<pre><code>test(&quot;createGame returns expected shape&quot;, () =&gt; {",
 				"  const game = createGame([&quot;Luke&quot;, &quot;Leia&quot;]);",
 				"",

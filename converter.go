@@ -63,6 +63,15 @@ func isCodeFenceLine(ln string) bool {
 	return strings.HasPrefix(trimmed, "```")
 }
 
+func getCodeFenceLanguage(ln string) string {
+	trimmed := strings.TrimSpace(ln)
+	if !strings.HasPrefix(trimmed, "```") {
+		return ""
+	}
+
+	return strings.TrimSpace(strings.TrimPrefix(trimmed, "```"))
+}
+
 func isListLine(ln string) bool {
 	if strings.HasPrefix(ln, "- ") {
 		return true
@@ -252,6 +261,7 @@ func processCodeBlock(lineIdx int, lines []string, indentation string) (int, str
 	var codeBlock strings.Builder
 	ln := lines[lineIdx]
 	depth := getLineDepth(ln)
+	language := getCodeFenceLanguage(ln)
 
 	lineIdx++
 	startIdx := lineIdx
@@ -259,7 +269,9 @@ func processCodeBlock(lineIdx int, lines []string, indentation string) (int, str
 		lineIdx++
 	}
 	if startIdx < lineIdx {
-		codeBlock.WriteString(indentation + "<div class=\"code\">\n" + indentation + "<pre><code>")
+		extraAttributes := buildDataLanguageAttribute(language)
+		codeBlock.WriteString(indentation + "<div class=\"code\"" + extraAttributes + ">\n")
+		codeBlock.WriteString(indentation + "<pre><code>")
 		for idx := startIdx; idx < lineIdx; idx++ {
 			codeBlock.WriteString(escapeHTML(trimCodeLineIndentation(lines[idx], depth)))
 			if idx < lineIdx-1 {
@@ -271,6 +283,14 @@ func processCodeBlock(lineIdx int, lines []string, indentation string) (int, str
 
 	lineIdx++ // Skip closing ```
 	return lineIdx, codeBlock.String()
+}
+
+func buildDataLanguageAttribute(language string) string {
+	if language != "" {
+		return fmt.Sprintf(" data-language=\"%s\"", escapeHTML(language))
+	}
+
+	return ""
 }
 
 func getLineDepth(ln string) int {
