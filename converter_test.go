@@ -503,6 +503,15 @@ func TestOrderedListConversion(t *testing.T) {
 				"<p>Hello World</p>",
 				""},
 		},
+		{
+			name: "06 Ordered list bold with code",
+			markdown: []string{
+				"1. **Install `package`**"},
+			expected: []string{
+				"<ol>",
+				"•<li><strong>Install <code>package</code></strong></li>",
+				"</ol>", ""},
+		},
 	}
 
 	for _, tt := range tests {

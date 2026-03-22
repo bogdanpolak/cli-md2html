@@ -599,11 +599,6 @@ func processInlineElements(text string) string {
 	// Now escape the remaining HTML in regular text
 	text = escapeHTML(text)
 
-	// Restore code placeholders
-	for placeholder, codeHTML := range codeMap {
-		text = strings.ReplaceAll(text, placeholder, codeHTML)
-	}
-
 	// Restore bold placeholders
 	for placeholder, boldHTML := range boldMap {
 		text = strings.ReplaceAll(text, placeholder, boldHTML)
@@ -617,6 +612,11 @@ func processInlineElements(text string) string {
 	// Restore link placeholders
 	for placeholder, linkHTML := range linkMap {
 		text = strings.ReplaceAll(text, placeholder, linkHTML)
+	}
+
+	// Restore code placeholders last (they can be nested inside bold/italic)
+	for placeholder, codeHTML := range codeMap {
+		text = strings.ReplaceAll(text, placeholder, codeHTML)
 	}
 
 	return text
